@@ -85,13 +85,16 @@ export function installDeploymentMode(ctx: ClientContext): void {
     applyCustomerMode(document)
     let pending = false
     const flush = (): void => {
+      if (!pending) return
       pending = false
       applyCustomerMode(document)
     }
     const requestFlush = (): void => {
       if (pending) return
       pending = true
-      requestAnimationFrame(flush)
+      // rAF 在隐藏/后台页不触发（headless/后台标签实测 never），用 setTimeout 兜底双保险。
+      if (typeof requestAnimationFrame === 'function') requestAnimationFrame(flush)
+      setTimeout(flush, 120)
     }
     const observer = new MutationObserver((records) => {
       for (const record of records) {
