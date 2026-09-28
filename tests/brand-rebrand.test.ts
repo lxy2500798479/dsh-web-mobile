@@ -81,3 +81,16 @@ test('浏览器标题效果在 index.tsx 中接线（源码级守卫）', async 
   const source = await readFile(join(root, 'src/client/index.tsx'), 'utf8')
   assert.ok(source.includes('installBrandTitle(ctx)'), 'missing installBrandTitle(ctx) wiring')
 })
+
+test('浏览器标签图标效果在 index.tsx 中接线（源码级守卫）', async () => {
+  const source = await readFile(join(root, 'src/client/index.tsx'), 'utf8')
+  assert.ok(source.includes('installBrandFavicon(ctx)'), 'missing installBrandFavicon(ctx) wiring')
+})
+
+test('favicon 效果：重指品牌 logo 并修正 type（源码级守卫，与标题同模块）', async () => {
+  const source = await readFile(join(root, 'src/client/effects/brand-title.ts'), 'utf8')
+  assert.ok(source.includes('installBrandFavicon'), 'missing installBrandFavicon')
+  assert.ok(source.includes('link[rel~="icon"]'), 'missing link[rel~="icon"] selector')
+  assert.ok(source.includes('SHIBEI_LOGO_URL'), 'missing SHIBEI_LOGO_URL usage')
+  assert.ok(source.includes("'image/png'"), "missing type correction to 'image/png'")
+})

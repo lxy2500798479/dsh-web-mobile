@@ -71,6 +71,22 @@ date: 2026-09-28
 > 2026-09-29 按用户口径回退——品牌/业务逻辑不放网关写死，归项目（本插件）。
 > 同一口径下 wm 站点的 favicon / PWA 图标走部署层**静态资产**替换（非代码）。
 
+### 4. 浏览器标签图标（favicon）—— 客户端覆盖（2026-09-29）
+
+宿主 shell HTML 写死两个 SVG favicon（`<link rel="icon" type="image/svg+xml"
+href="./favicon-dark.svg" media="(prefers-color-scheme: dark)">` + 亮色变体），
+没有 slot 也没有运行时配置面 ⇒ 与标题同路，由 `effects/brand-title.ts` 的
+`installBrandFavicon`（与标题同模块 —— 同属浏览器标签品牌、同一 DOM 覆盖机制）在客户端
+把 `rel` 含 `icon` 的 link 重指到 `SHIBEI_LOGO_URL`（PNG），并同步把 `type` 从
+`image/svg+xml` 修正为 `image/png`（不改 type 的话浏览器可能因 SVG 声明跳过该
+link）。挂载全量一遍 + 观察 `<head>` 子树新增（宿主整块重挂时补一次）；幂等、
+写入不回环；不做视口门控。
+
+> 边界：`apple-touch-icon` 不在射程（单词匹配不命中；且 iOS 桌面图标在「添加到
+> 主屏幕」时快照，运行时改不了）；PWA 安装名/`manifest.webmanifest` 是浏览器直接
+> 拉取的静态文件 —— 二者属部署层。**验证**：实例 HTML 原始 title 仍为宿主字样
+> （构建烘焙），运行时由本效果与 `brand-title` 覆盖。
+
 ## 文件地图
 
 | 文件 | 职责 |
@@ -78,8 +94,8 @@ date: 2026-09-28
 | `src/client/core/brand.ts` | 常量（URL / 文案 / 宿主原文清单）+ 判据 `isHostHeroHeadline`（零 DOM，可单测） |
 | `src/client/components/ShibeiBrand.tsx` | 三个占位组件（首屏 mark / 侧栏 mark / 侧栏名） |
 | `src/client/effects/brand-headline.ts` | 首屏标语 DOM 替换（挂载全量 + 增量观察） |
-| `src/client/effects/brand-title.ts` | 浏览器标签标题 DOM 覆盖（观察 `<title>`，宿主体裁换品牌，2026-09-29） |
-| `src/client/index.tsx` | 三处品牌位 `slots.inject` + `installBrandHeadline(ctx)` + `installBrandTitle(ctx)` + `installDeploymentMode(ctx)` + 模型座位遮蔽注册（devMode=false 时） |
+| `src/client/effects/brand-title.ts` | 浏览器标签品牌 DOM 覆盖（标题：观察 `<title>`；图标：观察 `<head>` 重指品牌 logo + 修正 type；2026-09-29） |
+| `src/client/index.tsx` | 三处品牌位 `slots.inject` + `installBrandHeadline(ctx)` + `installBrandTitle(ctx)` + `installBrandFavicon(ctx)` + `installDeploymentMode(ctx)` + 模型座位遮蔽注册（devMode=false 时） |
 | `src/client/config.ts` | 部署形态开关 `devMode`（客户态 / 开发态） |
 | `src/client/components/ModelSeatHidden.tsx` | 模型座位遮蔽组件（渲染 null） |
 | `src/client/effects/deployment-mode.ts` | developerTools 同步 + 设置/浏览器/插件面板行遮蔽 |
@@ -89,8 +105,10 @@ date: 2026-09-28
 - **浏览器标签标题已纳入（2026-09-29 续改）**：宿主标题是 `DSH_CLIENT_TITLE` 构建
   烘焙、运行时不读环境变量 ⇒ 由 `effects/brand-title.ts` 做 `<title>` 观察替换
   （见上节）。曾用的 nginx `sub_filter` 部署层方案已按用户口径回退。
-- **favicon / PWA 图标**：不在插件射程内 —— 走部署层静态资产（wm 站点已换拾贝
-  logo，存档 `deepseek-harness-docker/deploy/nginx/dsh-pwa/`）。
+- **favicon 已纳入（2026-09-29 续改）**：实例 shell HTML 写死两个 SVG link ⇒ 由
+  `effects/brand-favicon.ts` 客户端重指品牌 logo（见上节）。`apple-touch-icon`
+  与 PWA 安装名（`manifest.webmanifest`）不在插件射程 —— 属部署层静态资产
+  （wm 站点已换拾贝 logo，存档 `deepseek-harness-docker/deploy/nginx/dsh-pwa/`）。
 - **资产可达性**：logo 从 `maas-test.10rig.com` 运行时加载（带内容哈希，可长缓存）。
   客户侧若无该域名可达性，需要把资源换到公共入口或内联进包（改 `SHIBEI_LOGO_URL`
   一处即可）。
