@@ -19,18 +19,20 @@
   │  ├─ compress.ts          ← 进程级 prototype patch
   │  ├─ delete-session.ts    ← 会话删除纯核（DI、分代适配、可单测）
   │  └─ client/
-  │     ├─ index.tsx         ← 浏览器半区入口（3 slots）
+  │     ├─ index.tsx         ← 浏览器半区入口（3 功能 slots + 3 品牌位 + 客户形态模型座位遮蔽）
   │     ├─ debug.ts          ← ?mobile-nav-debug=1 诊断徽章
-  │     ├─ components/       ← MobileNavToggle / MobileDrawerFooter / ComposerFileButton / open-files-panel.ts
+  │     ├─ components/       ← MobileNavToggle / MobileDrawerFooter / ComposerFileButton / open-files-panel.ts / ShibeiBrand.tsx（3 品牌位）/ ModelSeatHidden.tsx（模型座位遮蔽）
+  │     ├─ config.ts         ← 部署形态开关（devMode：客户态收 轨迹/设置/浏览器/插件/模型座位；默认 false）
   │     ├─ core/             ← reconciler-core.ts（零 import）+ raf-scheduler.ts · css-rules.ts · sessions-compat.ts · layout-compat.ts · icon-compat.ts（宿主图标跨代命名兼容）
-  │     ├─ effects/          ← 18 个效果模块：phone-chrome · sidebar-swipe ·
+  │     ├─ effects/          ← 20 个效果模块：phone-chrome · sidebar-swipe ·
   │     │                       gesture-guard · subagent-chip-touch · composer-keyboard-guard ·
   │     │                       shortcut-modal-keyboard-guard ·
   │     │                       composer-plus-toggle · workspace-chip-toggle · team-chip-toggle ·
   │     │                       model-menu-anchor ·
   │     │                       file-viewer-compat · aionui-compat · stats-line ·
   │     │                       preview-fullscreen ·
-  │     │                       overlay-backdrop-fab · panel-exit · session-menu · session-row-fiber
+  │     │                       overlay-backdrop-fab · panel-exit · session-menu · session-row-fiber ·
+  │     │                       brand-headline · deployment-mode（客户形态收口）
   │     ├─ styles/           ← index.ts（base→layout→compat→misc 承载顺序）+ 4 个 .css.ts
   │     └─ i18n/locales.ts
   ├─ lib/                    ← 生成物：随 pnpm build 刷新，勿手改
@@ -41,9 +43,9 @@
   │  ├─ cdp-swipe-probe/failures · cdp-zoom-probe · cdp-compat-contracts (.mjs)
   │  ├─ css-structure-check.mjs ← CSS 结构检测器（已接入 test:core）
   │  └─ probes/              ← 22 个回归锚点（builtin-only，可单跑）
-  ├─ tests/                  ← 34 个 .test.ts（node --test，type-stripping 直跑）
+  ├─ tests/                  ← 35 个 .test.ts（node --test，type-stripping 直跑）
   ├─ docs/
-  │  ├─ specs/               ← 8 篇权威设计文档（入库）
+  │  ├─ specs/               ← 9 篇权威设计文档（入库）
   │  ├─ audits/ · maintenance/pitfalls.md · upstream/（runbook + compat-contracts.json + host-jank-feedback.md）· fork-wzxmt-zhc/
   │  └─ debug/ · superpowers/ ← 本地不入库（例外：composer-tree-recon.md 与 settings-market-debug-map.md 已于 2026-09-25 入库）
   ├─ .github/workflows/ci.yml ← verify → test:core → build → git diff --exit-code lib
@@ -246,7 +248,7 @@ dsh web
 
 ## Testing & QA
 
-- Automated gates: `pnpm verify` (typecheck) and `pnpm test:core`（34 个测试文件，glob 覆盖 `tests/` 全部）. `pnpm build` additionally exercises the custom client bundler. Use `git diff --check` for whitespace hygiene.
+- Automated gates: `pnpm verify` (typecheck) and `pnpm test:core`（35 个测试文件，glob 覆盖 `tests/` 全部）. `pnpm build` additionally exercises the custom client bundler. Use `git diff --check` for whitespace hygiene.
 - There is no linter, formatter, or coverage setup; the CI workflow (`.github/workflows/ci.yml`) additionally runs the lib freshness gate `git diff --exit-code lib`.
 - After source/layout changes, install the linked plugin in a real DSH Web profile, restart `dsh web`, and check both sides of the breakpoint:
   - **Narrow phone (~390px):** rail hidden; drawer/FAB/backdrop open and close; Escape; session-row action menus do not close the drawer; settings remains usable; Files opens explorer/preview sheets; session-log/footer actions work; preview fullscreen opens and resets.

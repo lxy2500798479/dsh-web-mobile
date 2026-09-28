@@ -4,6 +4,8 @@ import { MobileDrawerFooter } from './components/MobileDrawerFooter.tsx'
 import { ComposerFileButton } from './components/ComposerFileButton.tsx'
 import { openFilesPanel } from './components/open-files-panel.ts'
 import { MOBILE_CSS } from './styles/index.ts'
+import { HeroBrandMark, SidebarBrandMark, SidebarBrandName } from './components/ShibeiBrand.tsx'
+import { ModelSeatHidden } from './components/ModelSeatHidden.tsx'
 
 import { installFrameController, installOverlayInteractions, installPhoneChrome, installReconciler, registerReconcileTasks, MOBILE_QUERY } from './effects/phone-chrome.ts'
 import { installSidebarSwipe } from './effects/sidebar-swipe.ts'
@@ -16,6 +18,9 @@ import { installTeamChipToggle } from './effects/team-chip-toggle.ts'
 import { installModelMenuAnchor } from './effects/model-menu-anchor.ts'
 import { installShortcutModalKeyboardGuard } from './effects/shortcut-modal-keyboard-guard.ts'
 import { installAionuiCompat } from './effects/aionui-compat.ts'
+import { installBrandHeadline } from './effects/brand-headline.ts'
+import { installDeploymentMode } from './effects/deployment-mode.ts'
+import { config } from './config.ts'
 import { createPanelExit, installPanelRowExit } from './effects/panel-exit.ts'
 import { createRafScheduler } from './core/raf-scheduler.ts'
 import { installDebugBadge } from './debug.ts'
@@ -245,6 +250,14 @@ export function apply(ctx: ClientContext): void {
 
   installAionuiCompat(ctx)
 
+  // 拾贝起源换牌：首屏标语「探索未至之境」的 DOM 替换（官方把该文本硬写在
+  // conversation 字典里，没有 slot 也没有配置面，机制与边界见文件头）。
+  installBrandHeadline(ctx)
+
+  // 部署形态（config.ts 的 devMode）：客户态收 轨迹/设置/浏览器/插件/模型座位 等入口，
+  // 开发态全开。（轨迹/代码差异/预设切换走宿主官方 developerTools 门，见文件头。）
+  installDeploymentMode(ctx)
+
   // Debug badge (?mobile-nav-debug=1): live state overlay for phone-side
   // repros. No-op without the query param (docs: README, AGENTS.md).
   installDebugBadge(ctx)
@@ -299,6 +312,42 @@ export function apply(ctx: ClientContext): void {
     locale: NS,
     inject: () => ({}),
   }, ComposerFileButton))
+
+  // ---- 拾贝起源品牌位（2026-09-28）----
+  // 官方预留的品牌组合路径就是「占据 slot」（brand-official README「替换品牌」
+  // 节：自有身份的部署不组合该包，而是组合另一个占据这些 slot 的包）。宿主回退
+  // 分别是：首屏动画鱼 / 侧栏鱼形 / 「本地构建」标签。
+  //
+  // priority: -1 是必需的：`official` 构建档下 brand-official 正占着侧栏两个品牌位
+  // （实测本地宿主即 official 档，页面里是官方鱼形 + 英文 wordmark），单槽位同优先级
+  // 二次注册会直接抛错（slots 运行时原文：register at a different priority to
+  // shadow it (lowest renders)）。-1 = 明确遮蔽官方项；无竞争者时照常渲染。
+  ctx.slots.inject('conversation.hero.brand.mark', () => ctx.slots.register({
+    name: 'conversation.hero.brand.mark',
+    priority: -1,
+  }, HeroBrandMark))
+
+  ctx.slots.inject('sidebar.brand.mark', () => ctx.slots.register({
+    name: 'sidebar.brand.mark',
+    priority: -1,
+  }, SidebarBrandMark))
+
+  ctx.slots.inject('sidebar.brand.name', () => ctx.slots.register({
+    name: 'sidebar.brand.name',
+    priority: -1,
+  }, SidebarBrandName))
+
+  // ---- 单模型固定：前端不提供模型选择（2026-09-28）----
+  // 部署只有一个内置模型 → 遮蔽模型座位（宿主 single 槽，model-selection 插件
+  // 注册在优先级 0；这里 -1 覆盖并渲染空）。机制与品牌位一致：官方 slot 组合路径，
+  // 零宿主改动；旧宿主无此槽声明时静默惰性。仅在客户形态（config.devMode=false）
+  // 下注册：开发态恢复显示，便于切换模型调试。
+  if (!config.devMode) {
+    ctx.slots.inject('conversation.input.model', () => ctx.slots.register({
+      name: 'conversation.input.model',
+      priority: -1,
+    }, ModelSeatHidden))
+  }
 }
 
 // Type-only augmentation imports: pull the layout / conversation / sidebar /
