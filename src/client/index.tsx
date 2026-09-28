@@ -19,6 +19,7 @@ import { installModelMenuAnchor } from './effects/model-menu-anchor.ts'
 import { installShortcutModalKeyboardGuard } from './effects/shortcut-modal-keyboard-guard.ts'
 import { installAionuiCompat } from './effects/aionui-compat.ts'
 import { installBrandHeadline } from './effects/brand-headline.ts'
+import { installBrandTitle } from './effects/brand-title.ts'
 import { installDeploymentMode } from './effects/deployment-mode.ts'
 import { config } from './config.ts'
 import { createPanelExit, installPanelRowExit } from './effects/panel-exit.ts'
@@ -253,6 +254,10 @@ export function apply(ctx: ClientContext): void {
   // 拾贝起源换牌：首屏标语「探索未至之境」的 DOM 替换（官方把该文本硬写在
   // conversation 字典里，没有 slot 也没有配置面，机制与边界见文件头）。
   installBrandHeadline(ctx)
+
+  // 拾贝起源换牌：浏览器标签标题的 DOM 覆盖（标题由宿主构建烘焙 DSH_CLIENT_TITLE，
+  // 不入 slot 系统；机制与边界见文件头）。
+  installBrandTitle(ctx)
 
   // 部署形态（config.ts 的 devMode）：客户态收 轨迹/设置/浏览器/插件/模型座位 等入口，
   // 开发态全开。（轨迹/代码差异/预设切换走宿主官方 developerTools 门，见文件头。）

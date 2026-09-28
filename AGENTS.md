@@ -24,7 +24,7 @@
   │     ├─ components/       ← MobileNavToggle / MobileDrawerFooter / ComposerFileButton / open-files-panel.ts / ShibeiBrand.tsx（3 品牌位）/ ModelSeatHidden.tsx（模型座位遮蔽）
   │     ├─ config.ts         ← 部署形态开关（devMode：客户态收 轨迹/设置/浏览器/插件/模型座位；默认 false）
   │     ├─ core/             ← reconciler-core.ts（零 import）+ raf-scheduler.ts · css-rules.ts · sessions-compat.ts · layout-compat.ts · icon-compat.ts（宿主图标跨代命名兼容）
-  │     ├─ effects/          ← 20 个效果模块：phone-chrome · sidebar-swipe ·
+  │     ├─ effects/          ← 21 个效果模块：phone-chrome · sidebar-swipe ·
   │     │                       gesture-guard · subagent-chip-touch · composer-keyboard-guard ·
   │     │                       shortcut-modal-keyboard-guard ·
   │     │                       composer-plus-toggle · workspace-chip-toggle · team-chip-toggle ·
@@ -32,7 +32,7 @@
   │     │                       file-viewer-compat · aionui-compat · stats-line ·
   │     │                       preview-fullscreen ·
   │     │                       overlay-backdrop-fab · panel-exit · session-menu · session-row-fiber ·
-  │     │                       brand-headline · deployment-mode（客户形态收口）
+  │     │                       brand-headline · brand-title · deployment-mode（客户形态收口）
   │     ├─ styles/           ← index.ts（base→layout→compat→misc 承载顺序）+ 4 个 .css.ts
   │     └─ i18n/locales.ts
   ├─ lib/                    ← 生成物：随 pnpm build 刷新，勿手改

@@ -4,7 +4,7 @@ status: active
 date: 2026-09-28
 ---
 
-# 拾贝起源换牌（Logo / 首屏标语 / 侧栏品牌名）
+# 拾贝起源换牌（Logo / 首屏标语 / 侧栏品牌名 / 浏览器标题）
 
 ## 目标
 
@@ -57,6 +57,20 @@ date: 2026-09-28
 - 失败模式：宿主未来若改名 `titleGroup` 类本地名，处理静默失效（回退为显示宿主原文
   与徽标，无破坏）；`core/brand.ts` 的判据是唯一事实源，改文案/改移除清单只需改一处。
 
+### 3. 浏览器标签标题 —— 客户端覆盖（2026-09-29）
+
+宿主标题是**构建环境的事**：`DSH_CLIENT_TITLE` 在发布构建时烘焙进客户端包
+（dsh-client-ui-brand-official README 原文「浏览器标题独立——…而非通过 UI slot」），
+运行时由 ui-layout 的 DocumentTitle 持续写入 `document.title`（裸产品名，或
+「`<会话名> — <产品名>`」；会话切换与流式标题更新都会重写）。没有 slot、没有运行时
+可配置面 ⇒ 与首屏标语同路：`effects/brand-title.ts` 观察 `<title>` 子树，把宿主的
+「DeepSeek Harness」替换为 `SHIBEI_BRAND_NAME`（保留「会话名 — 」前缀；幂等，
+写入自身不回环）。
+
+> 备选方案记录：曾以 nginx `sub_filter` 在部署层替换（一次性、无需插件在场），
+> 2026-09-29 按用户口径回退——品牌/业务逻辑不放网关写死，归项目（本插件）。
+> 同一口径下 wm 站点的 favicon / PWA 图标走部署层**静态资产**替换（非代码）。
+
 ## 文件地图
 
 | 文件 | 职责 |
@@ -64,15 +78,19 @@ date: 2026-09-28
 | `src/client/core/brand.ts` | 常量（URL / 文案 / 宿主原文清单）+ 判据 `isHostHeroHeadline`（零 DOM，可单测） |
 | `src/client/components/ShibeiBrand.tsx` | 三个占位组件（首屏 mark / 侧栏 mark / 侧栏名） |
 | `src/client/effects/brand-headline.ts` | 首屏标语 DOM 替换（挂载全量 + 增量观察） |
-| `src/client/index.tsx` | 三处品牌位 `slots.inject` + `installBrandHeadline(ctx)` + `installDeploymentMode(ctx)` + 模型座位遮蔽注册（devMode=false 时） |
+| `src/client/effects/brand-title.ts` | 浏览器标签标题 DOM 覆盖（观察 `<title>`，宿主体裁换品牌，2026-09-29） |
+| `src/client/index.tsx` | 三处品牌位 `slots.inject` + `installBrandHeadline(ctx)` + `installBrandTitle(ctx)` + `installDeploymentMode(ctx)` + 模型座位遮蔽注册（devMode=false 时） |
 | `src/client/config.ts` | 部署形态开关 `devMode`（客户态 / 开发态） |
 | `src/client/components/ModelSeatHidden.tsx` | 模型座位遮蔽组件（渲染 null） |
 | `src/client/effects/deployment-mode.ts` | developerTools 同步 + 设置/浏览器/插件面板行遮蔽 |
 
 ## 边界与遗留
 
-- **不在本改造内**：浏览器标签标题与 favicon（宿主 `DSH_CLIENT_TITLE` 构建环境 /
-  nginx 宿主层的业务，见 wm 栈的 nginx 层），页面内 favicon 由宿主 HTML 决定。
+- **浏览器标签标题已纳入（2026-09-29 续改）**：宿主标题是 `DSH_CLIENT_TITLE` 构建
+  烘焙、运行时不读环境变量 ⇒ 由 `effects/brand-title.ts` 做 `<title>` 观察替换
+  （见上节）。曾用的 nginx `sub_filter` 部署层方案已按用户口径回退。
+- **favicon / PWA 图标**：不在插件射程内 —— 走部署层静态资产（wm 站点已换拾贝
+  logo，存档 `deepseek-harness-docker/deploy/nginx/dsh-pwa/`）。
 - **资产可达性**：logo 从 `maas-test.10rig.com` 运行时加载（带内容哈希，可长缓存）。
   客户侧若无该域名可达性，需要把资源换到公共入口或内联进包（改 `SHIBEI_LOGO_URL`
   一处即可）。

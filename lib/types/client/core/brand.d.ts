@@ -20,4 +20,19 @@ export declare function isHostHeroHeadline(text: string | null | undefined): boo
  * @returns true = 应移除该徽标。
  */
 export declare function isHostPreviewBadgeText(text: string | null | undefined): boolean;
+/**
+ * 宿主发布构建烘焙的浏览器标题（`DSH_CLIENT_TITLE`；dsh-client-ui-brand-official
+ * README 原文「浏览器标题独立——`DSH_CLIENT_TITLE` 在构建时选择标题文本，而非通过
+ * UI slot」）。运行时不读环境变量、也没有品牌配置面，插件只能做 DOM 覆盖。
+ */
+export declare const HOST_PRODUCT_TITLE = "DeepSeek Harness";
+/**
+ * 把浏览器标题里的宿主产品名替换为品牌名。
+ * 宿主布局层（ui-layout 的 DocumentTitle）把标题写成裸产品名，或
+ * 「`<会话名> — <产品名>`」（会话切换 / 流式标题更新都会重写）；两种形态都替换。
+ * 不含宿主要素时原样返回 —— 幂等，可反复作用于自身输出（观察器写入不回环）。
+ * @param title - 当前 document.title。
+ * @returns 应写入的标题。
+ */
+export declare function applyBrandTitle(title: string): string;
 //# sourceMappingURL=brand.d.ts.map

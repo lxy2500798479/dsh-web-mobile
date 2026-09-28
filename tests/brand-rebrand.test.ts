@@ -9,8 +9,10 @@ import { fileURLToPath } from 'node:url'
 import {
   HOST_HERO_HEADLINES,
   HOST_PREVIEW_BADGES,
+  HOST_PRODUCT_TITLE,
   SHIBEI_BRAND_NAME,
   SHIBEI_LOGO_URL,
+  applyBrandTitle,
   isHostHeroHeadline,
   isHostPreviewBadgeText,
 } from '../src/client/core/brand.ts'
@@ -61,4 +63,21 @@ test('三个品牌位注册在 index.tsx 中存在（源码级守卫）', async 
       `missing brand slot registration: ${slot}`,
     )
   }
+})
+
+test('浏览器标题判据：宿主产品名 → 品牌名（裸标题与「会话名 — 产品名」形态）', () => {
+  assert.equal(HOST_PRODUCT_TITLE, 'DeepSeek Harness')
+  assert.equal(applyBrandTitle(HOST_PRODUCT_TITLE), SHIBEI_BRAND_NAME)
+  assert.equal(
+    applyBrandTitle(`修复登录 — ${HOST_PRODUCT_TITLE}`),
+    `修复登录 — ${SHIBEI_BRAND_NAME}`,
+  )
+  // 幂等：品牌标题再作用一次不变（观察器写入不回环）
+  assert.equal(applyBrandTitle(SHIBEI_BRAND_NAME), SHIBEI_BRAND_NAME)
+  assert.equal(applyBrandTitle('别的产品'), '别的产品')
+})
+
+test('浏览器标题效果在 index.tsx 中接线（源码级守卫）', async () => {
+  const source = await readFile(join(root, 'src/client/index.tsx'), 'utf8')
+  assert.ok(source.includes('installBrandTitle(ctx)'), 'missing installBrandTitle(ctx) wiring')
 })
