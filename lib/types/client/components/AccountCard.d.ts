@@ -25,6 +25,9 @@ import { NS } from '../i18n/locales.ts';
  * 侧栏折叠（宿主 frame 的 `data-sidebar-collapsed="true"`，56px 图标轨道）时
  * 只留头像——名字隐藏与菜单溢出释放规则在 base.css.ts（轨道里放不下，实测
  * 名字会把行撑到 87px 并左右溢出、菜单会被宿主列的 overflow:hidden 裁掉）。
+ * 折叠规则只锚宿主原生的 data-sidebar-collapsed，不得用 [data-dsh-frame] /
+ * [data-pane] 装饰锚——那是 @linxin666/dsh-web-all 注入的，客户实例没有
+ * （2026-09-30 实例实测），靠它 = 规则在客户形态静默失效。
  *
  * 刻意跨宽度（桌面也渲染）：客户用电脑浏览器（鼠标指针）经门户访问时同样
  * 需要退出入口，所以标记 `account` 不在 misc.css.ts 的桌面遮蔽名单里——

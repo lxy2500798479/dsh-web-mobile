@@ -269,14 +269,22 @@ test('账号行展示名：中文名优先、缺省回落 localpart；头像首�
 test('侧栏折叠自适应：宿主折叠态（data-sidebar-collapsed）账号行只留头像（源码级守卫）', async () => {
   const base = await readFile(join(root, 'src/client/styles/base.css.ts'), 'utf8')
   assert.ok(
-    base.includes('[data-dsh-frame][data-sidebar-collapsed="true"] [data-mobile-nav="account-name"]'),
+    base.includes('[data-sidebar-collapsed="true"] [data-mobile-nav="account-name"]'),
     'missing collapsed-sidebar account-name hide',
   )
   assert.ok(
     base.includes(
-      '[data-dsh-frame][data-sidebar-collapsed="true"]:has([data-mobile-nav="account-menu"]) [data-pane="sidebar"]',
+      '[data-sidebar-collapsed="true"]:has([data-mobile-nav="account-menu"]) > :first-child',
     ),
     'missing collapsed-sidebar menu overflow release',
+  )
+  // 锚点红线：折叠规则只能锚宿主原生的 data-sidebar-collapsed；[data-dsh-frame] /
+  // [data-pane] 是 @linxin666/dsh-web-all 注入的装饰锚，客户实例不跑该插件
+  // （2026-09-30 实例实测：frame 上只有 data-sidebar-collapsed + data-rightbar-collapsed），
+  // 靠它 = 规则在客户形态静默失效（本轮首版修复就栽在这里）。
+  assert.ok(
+    !base.includes('[data-dsh-frame][data-sidebar-collapsed'),
+    'collapsed rules must not depend on the dsh-web-all decorator markers',
   )
   const card = await readFile(join(root, 'src/client/components/AccountCard.tsx'), 'utf8')
   assert.ok(card.includes('accountDisplayName('), 'account row must show the roster display name')
