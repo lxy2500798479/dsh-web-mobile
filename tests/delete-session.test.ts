@@ -4,6 +4,7 @@ import { mkdtemp, mkdir, readFile, readdir, writeFile, rm, stat, utimes, chmod }
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { deleteSession, type DeleteSessionDeps, type DeleteSessionResult } from '../src/delete-session.ts'
+import { serveFileDownload, MAX_DOWNLOAD_BYTES, contentDispositionFor, type DownloadFs } from '../src/file-download.ts'
 
 // Layout conventions mirrored from the JSONL backend (format.ts):
 //   sessionDir(root, cwd, id) = <root>/<projectKey(cwd)>/<encodeSegment(id)>/
@@ -490,4 +491,125 @@ test('skips workspaces that expose no detachSession (0.1.1/0.1.2 hosts)', async 
   } finally {
     await rm(root, { recursive: true, force: true })
   }
+})
+
+// The file-download route core (src/file-download.ts) is the customer's only
+// way to take a large container file onto the device (2026-09-29「文件大了就
+// 有问题」). The invariants pinned here are what make raising the ceiling to
+// MAX_DOWNLOAD_BYTES safe: the body streams in bounded windows instead of
+// buffering the file, the size check answers before any read, and filesystem
+// error codes map onto the wire statuses.
+interface ReadCall {
+  offset: number
+  length: number
+}
+
+/** Fake composed filesystem over one payload; `size: null` simulates a backend without size. */
+function fakeFs(payload: Uint8Array, reads: ReadCall[], size: number | null = payload.byteLength): DownloadFs {
+  return {
+    resolve: async (path: string) => ({ targetKey: path, displayPath: path }),
+    stat: async () => (size === null ? { type: 'file' as const } : { type: 'file' as const, size }),
+    readByteRange: async (_target, range) => {
+      reads.push({ ...range })
+      if (range.offset >= payload.byteLength) return new Uint8Array(0)
+      return payload.slice(range.offset, Math.min(range.offset + range.length, payload.byteLength))
+    },
+  }
+}
+
+const downloadRequest = (path: string, method = 'GET'): Request =>
+  new Request(`http://localhost/api/mobile-nav.file.download?path=${encodeURIComponent(path)}`, { method })
+
+test('serves a file as a streamed attachment in bounded windows', async () => {
+  const payload = new Uint8Array(10_000_000)
+  for (let index = 0; index < payload.byteLength; index += 1) payload[index] = index % 251
+  const reads: ReadCall[] = []
+  const response = await serveFileDownload(downloadRequest('/ws/报告.docx'), fakeFs(payload, reads))
+  assert.equal(response.status, 200)
+  assert.equal(response.headers.get('content-length'), String(payload.byteLength))
+  assert.equal(
+    response.headers.get('content-type'),
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  )
+  const disposition = response.headers.get('content-disposition') ?? ''
+  assert.match(disposition, /filename="__\.docx"/)
+  assert.match(disposition, /filename\*=UTF-8''%E6%8A%A5%E5%91%8A\.docx/)
+  const body = Buffer.from(await response.arrayBuffer())
+  assert.equal(Buffer.compare(body, Buffer.from(payload)), 0)
+  // Windowed, never a whole-file read: a 10 MB file is at least three windows.
+  assert.ok(reads.length >= 3, `expected windowed reads, saw ${reads.length}`)
+  assert.ok(reads.every((read) => read.length <= 4 * 1024 * 1024))
+})
+
+test('HEAD answers metadata without reading or streaming', async () => {
+  const reads: ReadCall[] = []
+  const response = await serveFileDownload(downloadRequest('/ws/a.txt', 'HEAD'), fakeFs(new Uint8Array(1024), reads))
+  assert.equal(response.status, 200)
+  assert.equal(response.headers.get('content-length'), '1024')
+  assert.equal(response.headers.get('content-type'), 'text/plain; charset=utf-8')
+  assert.equal(reads.length, 0)
+  assert.equal((await response.arrayBuffer()).byteLength, 0)
+})
+
+test('refuses files above the ceiling before reading anything', async () => {
+  const reads: ReadCall[] = []
+  const aboveDefault = await serveFileDownload(
+    downloadRequest('/ws/huge.bin'),
+    fakeFs(new Uint8Array(0), reads, MAX_DOWNLOAD_BYTES + 1),
+  )
+  assert.equal(aboveDefault.status, 413)
+  assert.equal(reads.length, 0)
+
+  const custom = await serveFileDownload(
+    new Request(`http://localhost/api/mobile-nav.file.download?path=${encodeURIComponent('/ws/ten.bin')}`),
+    fakeFs(new Uint8Array(11), reads, 11),
+    10,
+  )
+  assert.equal(custom.status, 413)
+  assert.equal(reads.length, 0)
+})
+
+test('maps malformed, missing and non-file requests onto the wire statuses', async () => {
+  const fs = fakeFs(new Uint8Array(1), [])
+  assert.equal((await serveFileDownload(new Request('http://localhost/api/mobile-nav.file.download'), fs)).status, 400)
+  assert.equal((await serveFileDownload(downloadRequest('relative/path.bin'), fs)).status, 400)
+  const missing: DownloadFs = { ...fs, stat: async () => undefined }
+  assert.equal((await serveFileDownload(downloadRequest('/ws/gone.pdf'), missing)).status, 404)
+  const directory: DownloadFs = { ...fs, stat: async () => ({ type: 'directory' as const }) }
+  assert.equal((await serveFileDownload(downloadRequest('/ws/dir'), directory)).status, 403)
+})
+
+test('maps filesystem error codes onto statuses and rethrows unknown ones', async () => {
+  const throwing = (code: string): DownloadFs => {
+    const fs = fakeFs(new Uint8Array(1), [])
+    return { ...fs, resolve: async () => { throw Object.assign(new Error(code), { code }) } }
+  }
+  assert.equal((await serveFileDownload(downloadRequest('/ws/a.bin'), throwing('FS_NOT_FOUND'))).status, 404)
+  assert.equal((await serveFileDownload(downloadRequest('/ws/a.bin'), throwing('FS_SANDBOX_DENIED'))).status, 403)
+  await assert.rejects(serveFileDownload(downloadRequest('/ws/a.bin'), throwing('SOMETHING_ELSE')))
+})
+
+test('streams until the first empty window when the backend cannot report size', async () => {
+  const payload = new Uint8Array([1, 2, 3, 4, 5])
+  const response = await serveFileDownload(downloadRequest('/ws/sizeless.bin'), fakeFs(payload, [], null))
+  assert.equal(response.status, 200)
+  assert.equal(response.headers.get('content-length'), null)
+  assert.equal(Buffer.compare(Buffer.from(await response.arrayBuffer()), Buffer.from(payload)), 0)
+})
+
+test('a mid-stream read failure surfaces as a body error', async () => {
+  const fs: DownloadFs = {
+    resolve: async (path: string) => ({ targetKey: path, displayPath: path }),
+    stat: async () => ({ type: 'file' as const, size: 8 }),
+    readByteRange: async (_target, range) => {
+      if (range.offset === 0) return new Uint8Array([1, 2, 3, 4])
+      throw Object.assign(new Error('aborted'), { code: 'FS_ABORTED' })
+    },
+  }
+  const response = await serveFileDownload(downloadRequest('/ws/a.bin'), fs)
+  await assert.rejects(response.arrayBuffer())
+})
+
+test('contentDispositionFor falls back to a plain name without a basename', () => {
+  assert.equal(contentDispositionFor('/ws/dir/'), 'attachment; filename="download"; filename*=UTF-8\'\'download')
 })

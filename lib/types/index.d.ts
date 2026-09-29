@@ -13,6 +13,12 @@
  * at request time through `ctx.get()` so the row fails with a clear error
  * (never crashes) in host shapes that omit them.
  *
+ * Since 2026-09-29 (customer line) it also mounts the streaming file
+ * download route `GET|HEAD /api/mobile-nav.file.download?path=<absolute>`
+ * through the authenticated `connection.fetch` fence — the harness ships no
+ * download surface and `/api/file` cannot carry large files (whole-file
+ * reads, 20 MiB image cap). See `file-download.ts` for the wire contract.
+ *
  * The browser half ships via exports["./client"], discovered through the
  * package.json dsh.client declaration. Host packages are intentionally NOT
  * type-imported: this repo's node_modules only carries the client-side
@@ -32,7 +38,20 @@ export interface HostContext {
         warn(message: string): void;
     };
 }
-/** Context shape inside the `webServer` inject scope. */
+/** Route-registration face of the connection service's authenticated fetch fence. */
+export interface ConnectionFetchRegistry {
+    register(route: {
+        path: string;
+        methods: readonly string[];
+        requestBody: 'buffered';
+        fetch: (request: Request) => Promise<Response> | Response;
+    }): unknown;
+}
+/**
+ * Context shape inside an inject scope. Both faces are declared on purpose:
+ * the real host types differ across generations, so this plugin declares the
+ * structural slices it registers routes on and guards each at the call site.
+ */
 export interface ScopedContext extends HostContext {
     webServer: {
         register(route: {
@@ -40,6 +59,12 @@ export interface ScopedContext extends HostContext {
             path: string;
             handler: (req: IncomingMessage, res: ServerResponse) => void | Promise<void>;
         }): unknown;
+    };
+    /** Present on Web host generations; optional here because the slice is hand-declared. */
+    connection?: {
+        fetch?: {
+            register?: ConnectionFetchRegistry['register'];
+        };
     };
 }
 /**

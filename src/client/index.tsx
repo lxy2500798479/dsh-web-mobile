@@ -326,10 +326,12 @@ export function apply(ctx: ClientContext): void {
   // ---- 文件下载（客户线，2026-09-29）----
   // 宿主 Web 端没有任何「把文件存到本机」的入口（预览=只读渲染；native open 只
   // 在有桌面宿主的桌面版存在），客户在 iOS PWA 上因此拿不到容器里的文件。占
-  // 官方为第三方预留的两个插槽：文档预览页头 + 不可预览空态。字节走宿主既有
-  // api/file 路由（cookie 鉴权）；落盘优先 Web Share 面板（iOS standalone 下
-  // 唯一可靠路径：存到「文件」/转发微信），桌面与非 iOS 回退锚点下载。机制与
-  // 边界见 core/file-download.ts 与组件文件头；槽位在旧宿主缺席时惰性为零。
+  // 官方为第三方预留的两个插槽：文档预览页头 + 不可预览空态。字节走本插件宿主
+  // 半区的流式下载路由 /api/mobile-nav.file.download（cookie 鉴权、500 MiB 上限、
+  // 分窗读取内存恒定）；落盘：HEAD 探测后，iOS 小文件走 Web Share 面板（standalone
+  // 下唯一可靠路径：存到「文件」/转发微信），其余一律浏览器原生流式下载（不占
+  // JS 内存）。机制与边界见 core/file-download.ts 与 src/file-download.ts；槽位
+  // 在旧宿主缺席时惰性为零。
   ctx.slots.inject('sidebar.right.tab.document.actions', () => ctx.slots.register({
     name: 'sidebar.right.tab.document.actions',
     id: 'mobile-nav-download',

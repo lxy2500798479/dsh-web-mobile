@@ -65,32 +65,43 @@ test('openFilesPanel: prefers the opener when both controls are present', () => 
 })
 
 // The file-delivery core (src/client/core/file-download.ts) is the customer's
-// only way to take a container file onto the device (2026-09-29 report「文件没
-// 有下载的渠道」). Its decision order is pinned with injected fakes: share
-// first when the environment supports files (the customer entry is an iOS
-// standalone PWA, where anchor downloads are silently ignored), the anchor
-// save as the fallback, cancellation honored as a user decision, and HTTP
-// failures mapped to the three user-facing classes.
+// only way to take a container file onto the device (2026-09-29 reports「文件没
+// 有下载的渠道」/「文件大了就有问题」). The decision order is pinned with
+// injected fakes: a HEAD probe first (its 404/413 become the user-facing
+// labels before any bytes move), the share sheet for small iOS files, and the
+// browser-native streamed download everywhere else — large files must never
+// transit JavaScript memory, and a cancelled share stays a user decision.
 const BLOB = new Blob(['payload'], { type: 'text/plain' })
+const SMALL = 1024
+const LARGE = 200 * 1024 * 1024
 
 interface FakeOptions {
   readonly calls: string[]
-  readonly status?: number
-  readonly fetchError?: boolean
+  readonly headStatus?: number
+  readonly headError?: boolean
+  readonly size?: number | null
+  readonly getStatus?: number
+  readonly getError?: boolean
   readonly canShare?: boolean
   readonly shareError?: unknown
+  readonly downloadError?: boolean
   readonly onShare?: (file: File) => void
-  readonly onSave?: (name: string) => void
 }
 
 const fakeEnvironment = (options: FakeOptions): FileDeliveryEnvironment => ({
-  fetchBytes: async () => {
-    options.calls.push('fetch')
-    if (options.fetchError === true) throw new TypeError('network down')
-    if (options.status !== undefined && options.status !== 200) return { ok: false, status: options.status }
+  headFile: async () => {
+    options.calls.push('head')
+    if (options.headError === true) throw new TypeError('network down')
+    if (options.headStatus !== undefined && options.headStatus !== 200) return { ok: false, status: options.headStatus }
+    return { ok: true, size: options.size === undefined ? SMALL : options.size }
+  },
+  fetchBlob: async () => {
+    options.calls.push('get')
+    if (options.getError === true) throw new TypeError('network down')
+    if (options.getStatus !== undefined && options.getStatus !== 200) return { ok: false, status: options.getStatus }
     return { ok: true, blob: BLOB }
   },
-  canShare: () => {
+  canShareFiles: () => {
     options.calls.push('canShare')
     return options.canShare ?? false
   },
@@ -99,16 +110,16 @@ const fakeEnvironment = (options: FakeOptions): FileDeliveryEnvironment => ({
     options.onShare?.(file)
     if (options.shareError !== undefined) throw options.shareError
   },
-  save: (_blob: Blob, name: string) => {
-    options.calls.push('save')
-    options.onSave?.(name)
+  download: () => {
+    options.calls.push('download')
+    if (options.downloadError === true) throw new Error('download blocked')
   },
 })
 
 test('fileDownloadRoute: document-relative and path-encoded', () => {
   assert.equal(
     fileDownloadRoute('/ws dir/报告 v2.pdf'),
-    'api/file?path=%2Fws%20dir%2F%E6%8A%A5%E5%91%8A%20v2.pdf',
+    'api/mobile-nav.file.download?path=%2Fws%20dir%2F%E6%8A%A5%E5%91%8A%20v2.pdf',
   )
 })
 
@@ -119,64 +130,86 @@ test('fileNameFromPath: basename with the download fallback', () => {
   assert.equal(fileNameFromPath('C:\\ws\\x.bin'), 'x.bin')
 })
 
-test('deliverFile: prefers the share sheet when the environment can share files', async () => {
+test('deliverFile: small file on iOS goes through the share sheet', async () => {
   const calls: string[] = []
   let sharedName = ''
   let sharedType = ''
   const outcome = await deliverFile('/workspace/report.docx', fakeEnvironment({
     calls,
+    size: SMALL,
     canShare: true,
     onShare: (file) => { sharedName = file.name; sharedType = file.type },
   }))
-  assert.deepEqual(calls, ['fetch', 'canShare', 'share'])
+  assert.deepEqual(calls, ['head', 'canShare', 'get', 'share'])
   assert.deepEqual(outcome, { kind: 'shared' })
   assert.equal(sharedName, 'report.docx')
   assert.equal(sharedType, 'text/plain')
 })
 
-test('deliverFile: falls back to the anchor save without share support', async () => {
+test('deliverFile: without share support the browser downloads the stream', async () => {
   const calls: string[] = []
-  let savedName = ''
-  const outcome = await deliverFile('/workspace/report.docx', fakeEnvironment({
-    calls,
-    onSave: (name) => { savedName = name },
-  }))
-  assert.deepEqual(calls, ['fetch', 'canShare', 'save'])
+  const outcome = await deliverFile('/workspace/report.docx', fakeEnvironment({ calls, size: SMALL }))
+  assert.deepEqual(calls, ['head', 'canShare', 'download'])
   assert.deepEqual(outcome, { kind: 'saved' })
-  assert.equal(savedName, 'report.docx')
+})
+
+test('deliverFile: a file above the share ceiling streams instead of entering memory', async () => {
+  const calls: string[] = []
+  const outcome = await deliverFile('/workspace/big.zip', fakeEnvironment({ calls, size: LARGE, canShare: true }))
+  assert.deepEqual(calls, ['head', 'canShare', 'download'])
+  assert.deepEqual(outcome, { kind: 'saved' })
+})
+
+test('deliverFile: an unknown size takes the share path on iOS', async () => {
+  const calls: string[] = []
+  const outcome = await deliverFile('/workspace/a.bin', fakeEnvironment({ calls, size: null, canShare: true }))
+  assert.deepEqual(calls, ['head', 'canShare', 'get', 'share'])
+  assert.deepEqual(outcome, { kind: 'shared' })
 })
 
 test('deliverFile: a cancelled share sheet is a user decision, not a failure', async () => {
   const calls: string[] = []
   const cancelled = Object.assign(new Error('cancelled'), { name: 'AbortError' })
   const outcome = await deliverFile('/workspace/a.bin', fakeEnvironment({ calls, canShare: true, shareError: cancelled }))
-  assert.deepEqual(calls, ['fetch', 'canShare', 'share'])
+  assert.deepEqual(calls, ['head', 'canShare', 'get', 'share'])
   assert.deepEqual(outcome, { kind: 'cancelled' })
 })
 
-test('deliverFile: a refused share falls back to the anchor save', async () => {
+test('deliverFile: a refused share falls through to the streamed download', async () => {
   const calls: string[] = []
   const refused = Object.assign(new Error('not allowed'), { name: 'NotAllowedError' })
   const outcome = await deliverFile('/workspace/a.bin', fakeEnvironment({ calls, canShare: true, shareError: refused }))
-  assert.deepEqual(calls, ['fetch', 'canShare', 'share', 'save'])
+  assert.deepEqual(calls, ['head', 'canShare', 'get', 'share', 'download'])
   assert.deepEqual(outcome, { kind: 'saved' })
 })
 
-test('deliverFile: oversized and missing files map to their labels without a handoff', async () => {
+test('deliverFile: oversized and missing files map to their labels before any byte moves', async () => {
   const bigCalls: string[] = []
-  const big = await deliverFile('/workspace/big.zip', fakeEnvironment({ calls: bigCalls, status: 413, canShare: true }))
-  assert.deepEqual(bigCalls, ['fetch'])
+  const big = await deliverFile('/workspace/big.zip', fakeEnvironment({ calls: bigCalls, headStatus: 413, canShare: true }))
+  assert.deepEqual(bigCalls, ['head'])
   assert.deepEqual(big, { kind: 'failed', failure: 'too-large' })
 
   const missingCalls: string[] = []
-  const missing = await deliverFile('/workspace/gone.pdf', fakeEnvironment({ calls: missingCalls, status: 404 }))
-  assert.deepEqual(missingCalls, ['fetch'])
+  const missing = await deliverFile('/workspace/gone.pdf', fakeEnvironment({ calls: missingCalls, headStatus: 404 }))
+  assert.deepEqual(missingCalls, ['head'])
   assert.deepEqual(missing, { kind: 'failed', failure: 'missing' })
 })
 
-test('deliverFile: a rejected fetch reports the generic failure', async () => {
+test('deliverFile: a rejected probe or body read reports the generic failure', async () => {
+  const probeCalls: string[] = []
+  const probe = await deliverFile('/workspace/a.bin', fakeEnvironment({ calls: probeCalls, headError: true }))
+  assert.deepEqual(probeCalls, ['head'])
+  assert.deepEqual(probe, { kind: 'failed', failure: 'failed' })
+
+  const readCalls: string[] = []
+  const read = await deliverFile('/workspace/a.bin', fakeEnvironment({ calls: readCalls, canShare: true, getError: true }))
+  assert.deepEqual(readCalls, ['head', 'canShare', 'get'])
+  assert.deepEqual(read, { kind: 'failed', failure: 'failed' })
+})
+
+test('deliverFile: a blocked download navigation reports the generic failure', async () => {
   const calls: string[] = []
-  const outcome = await deliverFile('/workspace/a.bin', fakeEnvironment({ calls, fetchError: true }))
-  assert.deepEqual(calls, ['fetch'])
+  const outcome = await deliverFile('/workspace/a.bin', fakeEnvironment({ calls, downloadError: true }))
+  assert.deepEqual(calls, ['head', 'canShare', 'download'])
   assert.deepEqual(outcome, { kind: 'failed', failure: 'failed' })
 })

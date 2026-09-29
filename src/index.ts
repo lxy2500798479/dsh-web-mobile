@@ -13,6 +13,12 @@
  * at request time through `ctx.get()` so the row fails with a clear error
  * (never crashes) in host shapes that omit them.
  *
+ * Since 2026-09-29 (customer line) it also mounts the streaming file
+ * download route `GET|HEAD /api/mobile-nav.file.download?path=<absolute>`
+ * through the authenticated `connection.fetch` fence — the harness ships no
+ * download surface and `/api/file` cannot carry large files (whole-file
+ * reads, 20 MiB image cap). See `file-download.ts` for the wire contract.
+ *
  * The browser half ships via exports["./client"], discovered through the
  * package.json dsh.client declaration. Host packages are intentionally NOT
  * type-imported: this repo's node_modules only carries the client-side
@@ -21,6 +27,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { installResponseCompression } from './compress.js'
 import { deleteSession, type DeleteSessionDeps } from './delete-session.js'
+import { FILE_DOWNLOAD_PATH, serveFileDownload, type DownloadFs } from './file-download.js'
 
 /** Minimal structural slice of the host cordis Context that apply() needs. */
 export interface HostContext {
@@ -34,7 +41,21 @@ export interface HostContext {
   logger: { warn(message: string): void }
 }
 
-/** Context shape inside the `webServer` inject scope. */
+/** Route-registration face of the connection service's authenticated fetch fence. */
+export interface ConnectionFetchRegistry {
+  register(route: {
+    path: string
+    methods: readonly string[]
+    requestBody: 'buffered'
+    fetch: (request: Request) => Promise<Response> | Response
+  }): unknown
+}
+
+/**
+ * Context shape inside an inject scope. Both faces are declared on purpose:
+ * the real host types differ across generations, so this plugin declares the
+ * structural slices it registers routes on and guards each at the call site.
+ */
 export interface ScopedContext extends HostContext {
   webServer: {
     register(route: {
@@ -42,6 +63,12 @@ export interface ScopedContext extends HostContext {
       path: string
       handler: (req: IncomingMessage, res: ServerResponse) => void | Promise<void>
     }): unknown
+  }
+  /** Present on Web host generations; optional here because the slice is hand-declared. */
+  connection?: {
+    fetch?: {
+      register?: ConnectionFetchRegistry['register']
+    }
   }
 }
 
@@ -184,4 +211,47 @@ export function apply(ctx: HostContext): void {
       },
     }), 'dsh-web-mobile: session-delete route')
   })
+
+  // File-download route (customer line, 2026-09-29): the harness has no
+  // download surface and iOS standalone web apps ignore anchor downloads, so
+  // the browser half hands small files to the Web Share sheet — which needs
+  // the bytes inside the page. `/api/file` cannot carry them (whole-file
+  // reads capped at the 20 MiB image limit); this route streams bounded
+  // windows up to MAX_DOWNLOAD_BYTES through the authenticated /api fence.
+  // The filesystem service is read per request, so host shapes without it
+  // answer a structured 503 instead of crashing.
+  ctx.inject(['connection'], (connCtx) => {
+    const registry = connCtx.connection?.fetch
+    if (registry?.register === undefined) {
+      ctx.logger.warn('dsh-web-mobile: connection.fetch.register unavailable; file-download route not mounted')
+      return
+    }
+    connCtx.effect(() => registry.register?.({
+      path: FILE_DOWNLOAD_PATH,
+      methods: ['GET', 'HEAD'],
+      requestBody: 'buffered',
+      fetch: (request: Request) => answerDownload(ctx, request),
+    }), 'dsh-web-mobile: file-download route')
+  })
+}
+
+/**
+ * Answer one download request, resolving the composed filesystem lazily so a
+ * host that omits it degrades to a structured 503.
+ * @param ctx - host context the route captures (service lookup happens per request).
+ * @param request - fenced /api request handed over by the connection service.
+ * @returns the streaming download response.
+ */
+async function answerDownload(ctx: HostContext, request: Request): Promise<Response> {
+  const fs = ctx.get('fs') as DownloadFs | undefined
+  if (fs === undefined
+    || typeof fs.resolve !== 'function'
+    || typeof fs.stat !== 'function'
+    || typeof fs.readByteRange !== 'function') {
+    return new Response('filesystem unavailable', {
+      status: 503,
+      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+    })
+  }
+  return serveFileDownload(request, fs)
 }
