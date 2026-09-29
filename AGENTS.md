@@ -8,20 +8,21 @@
 - No monorepo, no application server, no workspace layer.
 - Real entrypoints:
   - `cordis.patch.yml` inserts the single host plugin row.
-  - `src/index.ts` is the host half: `apply()` makes the row visible to the host Loader, installs transparent gzip/brotli compression for large JSON responses (`src/compress.ts`), and registers the session-delete endpoint `/api/mobile-nav.session.delete` (work in `src/delete-session.ts`).
+  - `src/index.ts` is the host half: `apply()` makes the row visible to the host Loader, installs transparent gzip/brotli compression for large JSON responses (`src/compress.ts`), and registers the session-delete endpoint `/api/mobile-nav.session.delete` (work in `src/delete-session.ts`) and the file-download route `/api/mobile-nav.file.download` (work in `src/file-download.ts`).
   - `package.json` exposes `./client` and declares `dsh.client.platform: "web"`; DSH discovers the browser half from `src/client/index.tsx`.
 - Key layout（注释版仓库树；`(不入库)` = gitignore，外部 clone 不可见）:
 
   ```text
   dsh-web-mobile/
   ├─ src/                    ← 真源码，唯一该手改的地方
-  │  ├─ index.ts             ← 宿主半区入口（apply 装响应压缩 + 会话删除端点）
+  │  ├─ index.ts             ← 宿主半区入口（apply 装响应压缩 + 会话删除端点 + 流式下载路由）
   │  ├─ compress.ts          ← 进程级 prototype patch
   │  ├─ delete-session.ts    ← 会话删除纯核（DI、分代适配、可单测）
+  │  ├─ file-download.ts     ← 文件下载流式路由核（分窗读取、内存与文件大小解耦、可单测）
   │  └─ client/
   │     ├─ index.tsx         ← 浏览器半区入口（3 功能 slots + 3 品牌位 + 客户形态模型座位遮蔽）
   │     ├─ debug.ts          ← ?mobile-nav-debug=1 诊断徽章
-  │     ├─ components/       ← MobileNavToggle / MobileDrawerFooter / ComposerFileButton / open-files-panel.ts / ShibeiBrand.tsx（3 品牌位）/ ModelSeatHidden.tsx（模型座位遮蔽）
+  │     ├─ components/       ← MobileNavToggle / MobileDrawerFooter / ComposerFileButton / FileDownloadButton.tsx（下载）/ open-files-panel.ts / ShibeiBrand.tsx（3 品牌位）/ ModelSeatHidden.tsx（模型座位遮蔽）
   │     ├─ config.ts         ← 部署形态开关（devMode：客户态收 轨迹/设置/浏览器/插件/模型座位；默认 false）
   │     ├─ core/             ← reconciler-core.ts（零 import）+ raf-scheduler.ts · css-rules.ts · sessions-compat.ts · layout-compat.ts · icon-compat.ts（宿主图标跨代命名兼容）
   │     ├─ effects/          ← 21 个效果模块：phone-chrome · sidebar-swipe ·
