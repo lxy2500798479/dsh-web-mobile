@@ -30,6 +30,7 @@ import {
   bootRevInHtml,
   bootRevOf,
   isBrowserDesktopLabel,
+  isImSessionTitle,
   isModelCommandRow,
   isWelcomeNoticeLabel,
   panelRowMaskId,
@@ -184,6 +185,27 @@ test('菜单「模型」行指纹：命中 zh/en 描述，其它命令行不误�
   assert.equal(isModelCommandRow(undefined), false)
 })
 
+test('IM 桥接会话行遮蔽：树行/搜索行 + marker 钩子 + 标题前缀族（源码级守卫）', async () => {
+  const source = await readFile(join(root, 'src/client/effects/deployment-mode.ts'), 'utf8')
+  assert.ok(
+    source.includes('[role="treeitem"][aria-selected], button[class*="searchResultRow"]'),
+    'missing session-row selector',
+  )
+  assert.ok(source.includes('data-dsh-im-session-channel'), 'missing dsh-im marker hook')
+  assert.ok(source.includes('imSessionRows'), 'missing mask item wiring')
+})
+
+test('IM 桥接会话标题指纹：命中各通道前缀，普通会话不误伤', () => {
+  assert.equal(isImSessionTitle('Matrix · liliubing ↔ AI'), true)
+  assert.equal(isImSessionTitle('微信 · 张三'), true)
+  assert.equal(isImSessionTitle('Telegram · chat'), true)
+  assert.equal(isImSessionTitle('Matrix · '), false, '前缀后必须非空')
+  assert.equal(isImSessionTitle('新会话'), false)
+  assert.equal(isImSessionTitle('Matrix 报告'), false)
+  assert.equal(isImSessionTitle(''), false)
+  assert.equal(isImSessionTitle(null), false)
+})
+
 test('界面收口开关：总开关 + 每项一配置，默认全遮（行为零变化）', () => {
   assert.equal(config.mask.master, true, '总开关默认必须为客户形态（按 items 遮蔽）')
   const ids = Object.keys(config.mask.items).sort()
@@ -192,7 +214,11 @@ test('界面收口开关：总开关 + 每项一配置，默认全遮（行为�
     Object.keys(MASK_ITEM_TITLES).sort(),
     'config.mask.items 与引擎清单（MASK_ITEM_TITLES）必须逐项对齐',
   )
-  assert.equal(ids.length, 14, '收口项共 14 项（含最新两项：菜单「模型」行 / 本轮用量胶囊）')
+  assert.equal(
+    ids.length,
+    15,
+    '收口项共 15 项（含最新三项：菜单「模型」行 / 本轮用量胶囊 / IM 桥接会话行）',
+  )
   for (const id of ids) {
     assert.equal(
       (config.mask.items as Record<string, boolean>)[id],
@@ -202,6 +228,7 @@ test('界面收口开关：总开关 + 每项一配置，默认全遮（行为�
   }
   assert.equal(maskEnabled('turnUsage'), true)
   assert.equal(maskEnabled('menuModel'), true)
+  assert.equal(maskEnabled('imSessionRows'), true)
 })
 
 test('内测声明弹窗指纹：命中 zh/en，普通对话框不误伤', async () => {

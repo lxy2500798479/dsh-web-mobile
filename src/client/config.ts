@@ -22,6 +22,8 @@
  *  - twinDesk         「分身工作台」按钮
  *  - terminalCard     「新建终端」入口卡
  *  - turnUsage        每轮动作行「本轮用量」胶囊
+ *  - imSessionRows    IM 桥接会话行（dsh-im「Matrix · …」等通道会话；侧栏列表/搜索结果不露出
+ *                     ——2026-09-30 店主口径：聊天在 IM 侧，工作台里再出现 = 多余）
  *
  * 设计取舍（2026-09-29 开关化，店主口径「开关是代码层面的，不是配置到界面」）：
  * 一个总开关 + 每项一个配置；引擎（effects/deployment-mode.ts、index.tsx 座位注册）
@@ -51,6 +53,7 @@ export const config = {
       twinDesk: true,
       terminalCard: true,
       turnUsage: true,
+      imSessionRows: true,
     },
   },
 } as const

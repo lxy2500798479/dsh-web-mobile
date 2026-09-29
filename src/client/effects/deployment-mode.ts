@@ -77,6 +77,7 @@ export const MASK_ITEM_TITLES: Record<MaskItemId, string> = {
   twinDesk: '「分身工作台」按钮',
   terminalCard: '「新建终端」入口卡',
   turnUsage: '本轮用量胶囊',
+  imSessionRows: 'IM 桥接会话行（dsh-im 通道会话：Matrix · …）',
 }
 
 /** 需要 DOM pass（含观察器重放）的收口项；全关时整段不安装。 */
@@ -89,6 +90,7 @@ const DOM_MASK_IDS: readonly MaskItemId[] = [
   'browserDesktop',
   'menuModel',
   'welcomeDialog',
+  'imSessionRows',
 ]
 
 /** 任一 DOM 收口项启用（总开关 + 单项；全关 = pass 无需安装）。 */
@@ -151,6 +153,43 @@ export function isModelCommandRow(text: string | null | undefined): boolean {
   return MODEL_COMMAND_HINTS.some((hint) => lowered.includes(hint))
 }
 
+/** 侧栏会话列表行 / 搜索结果行（宿主树组件；桥接会话的标题 span 由 dsh-im 图标插件打位）。 */
+const IM_SESSION_ROW_SELECTOR = '[role="treeitem"][aria-selected], button[class*="searchResultRow"]'
+
+/**
+ * IM 桥接会话的标题前缀族（与 @xmanrui/dsh-im 的 SESSION_CHANNEL_LABELS 对齐；标题形态
+ * =「<标签> · <标题>」）。客户形态不在工作台露出这些会话行——2026-09-30 店主口径：
+ * 聊天在 Element/IM 侧进行，工作台列表里再出现一条「Matrix · …」= 多余显示。
+ */
+const IM_SESSION_TITLE_PREFIXES = [
+  'Matrix · ',
+  '微信 · ',
+  '飞书 · ',
+  '钉钉 · ',
+  '企业微信 · ',
+  'QQ · ',
+  'Slack · ',
+  'Telegram · ',
+  'Discord · ',
+  'WhatsApp · ',
+  'iMessage · ',
+  'AI Office · ',
+] as const
+
+/** 该标题是否属于 IM 桥接会话（纯函数，供单测）：精确前缀 + 前缀后必须有非空标题。 */
+export function isImSessionTitle(text: string | null | undefined): boolean {
+  if (typeof text !== 'string') return false
+  return IM_SESSION_TITLE_PREFIXES.some(
+    (prefix) => text.startsWith(prefix) && text.slice(prefix.length).trim() !== '',
+  )
+}
+
+/** 该行是否 IM 桥接会话：dsh-im 图标插件的 marker 优先，标题前缀兜底（marker 异步晚到）。 */
+function isImSessionRow(row: Element): boolean {
+  if (row.querySelector('[data-dsh-im-session-channel]') !== null) return true
+  return isImSessionTitle((row.textContent ?? '').trim())
+}
+
 /**
  * 客户形态「首帧隐形」样式（模块求值即注入——早于设置壳渲染，弹窗从未被绘制过，
  * 不是「渲染后再隐藏」）。`body > div:not(#root)` 限定在门户出去的门层，防误伤 App 根。
@@ -176,6 +215,12 @@ const CSS_RULES_BY_ITEM: Partial<Record<MaskItemId, readonly string[]>> = {
   // 每轮动作行的「本轮用量」胶囊（官方 ui-chat TurnUsagePanel；类名 = 官方包构建哈希，
   // 与 0.1.7-rc.2 对账）：客户形态隐藏，动作行只保留 复制/点赞/点踩/分支 四颗。
   turnUsage: ['[class*="Q51KRG_root"] { display: none !important; }'],
+  // IM 桥接会话行（marker = dsh-im 图标插件打的稳定位）：CSS 管「已打位」的行——重渲染
+  // 命中即隐形、零闪烁；未打位的首帧 / 无图标环境由 DOM pass 的标题前缀兜底。
+  imSessionRows: [
+    '[role="treeitem"]:has([data-dsh-im-session-channel]) { display: none !important; }',
+    'button[class*="searchResultRow"]:has([data-dsh-im-session-channel]) { display: none !important; }',
+  ],
 }
 
 /** 启用项拼出的首帧样式（空串 = 不注入任何样式；总开关关 = 全空）。 */
@@ -208,6 +253,7 @@ const CUSTOMER_TARGET_SELECTOR = [
   'button[aria-label*="浏览器桌面"]',
   COMMAND_OPTION_SELECTOR,
   WELCOME_DIALOG_SELECTOR,
+  IM_SESSION_ROW_SELECTOR,
 ].join(', ')
 
 /** 面板行 → 收口项 id（纯函数，供单测；非收口行返回 null）。 */
@@ -252,6 +298,11 @@ export function applyCustomerMode(root: ParentNode): boolean {
     for (const option of root.querySelectorAll(COMMAND_OPTION_SELECTOR)) {
       if (!isModelCommandRow(option.textContent)) continue
       hideElement(option)
+    }
+  }
+  if (maskEnabled('imSessionRows')) {
+    for (const row of root.querySelectorAll(IM_SESSION_ROW_SELECTOR)) {
+      if (isImSessionRow(row)) hideElement(row)
     }
   }
   if (maskEnabled('welcomeDialog')) {

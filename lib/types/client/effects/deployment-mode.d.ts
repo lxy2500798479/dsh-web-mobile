@@ -67,6 +67,8 @@ export declare function isBrowserDesktopLabel(label: string | null | undefined):
 export declare function isWelcomeNoticeLabel(label: string | null | undefined): boolean;
 /** 该菜单行是否属于「模型」命令（纯函数，供单测）。 */
 export declare function isModelCommandRow(text: string | null | undefined): boolean;
+/** 该标题是否属于 IM 桥接会话（纯函数，供单测）：精确前缀 + 前缀后必须有非空标题。 */
+export declare function isImSessionTitle(text: string | null | undefined): boolean;
 /** 面板行 → 收口项 id（纯函数，供单测；非收口行返回 null）。 */
 export declare function panelRowMaskId(label: string | null | undefined): MaskItemId | null;
 /**

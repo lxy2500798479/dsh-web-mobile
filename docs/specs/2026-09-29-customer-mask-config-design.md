@@ -79,7 +79,7 @@ export const config = {
 
 1. `config.ts` 重构（上述结构）+ 引擎数据化（清单表 + 按配置过滤执行）。
 2. 测试：
-   - 清单完备性守卫：14 项 id 全覆盖、引擎无漏接；
+   - 清单完备性守卫：15 项 id 全覆盖（2026-09-30 追加 `imSessionRows`）、引擎无漏接；
    - 过滤行为：以不同配置快照验证"启用集 → 各机制输出"（纯函数层）；
    - 既有测试保持全绿。
 3. 本地活体验证：默认全遮（与现状一致）→ `master=false` 全开 → 单项回开（CSS / DOM / 官方门 / 座位 四类各挑一项）。
@@ -93,10 +93,15 @@ export const config = {
 
 ## 落地记录（2026-09-29）
 
-已按本稿落地：`config.ts`（`mask.master` + `mask.items` 14 项，`devMode` 退役）、
+已按本稿落地：`config.ts`（`mask.master` + `mask.items` 15 项，`devMode` 退役）、
 `deployment-mode.ts`（`MASK_ITEM_TITLES` 清单与 `CSS_RULES_BY_ITEM`，各执行器按项过滤：
 CSS 首帧 / DOM pass 与观察器 / 官方 `developerTools` 门）、`index.tsx`（模型座位按项注册）。
 守卫：`tests/brand-rebrand.test.ts` 对账 `mask.items` ↔ `MASK_ITEM_TITLES` 并锁定默认全遮。
+
+**2026-09-30 追加一项**：`imSessionRows` —— IM 桥接会话行（dsh-im「Matrix · …」通道会话不在客户工作台
+露出；店主口径：聊天在 IM 侧，工作台里再出现 = 多余）。锚点 = dsh-im 图标插件的稳定 marker
+（`data-dsh-im-session-channel`）+ 通道标题前缀族兜底；CSS（`:has`，重渲染零闪烁）与 DOM pass（前缀
+兜底）双路。本地实机注入验证（文本命中 / marker 命中 / 对照行）全过，随 `3.1.0-lxy.15` 发版。
 
 实机四步验证（本地 0.1.7-rc.2，桌面 + 触屏仿真）：
 1. **默认全遮**：与改造前完全一致（用量胶囊/设置入口/菜单「模型」行/文件浏览按钮均遮蔽，
