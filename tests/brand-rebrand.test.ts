@@ -29,6 +29,7 @@ import {
   bootRevInHtml,
   bootRevOf,
   isBrowserDesktopLabel,
+  isModelCommandRow,
   isWelcomeNoticeLabel,
   shouldHidePanelLabel,
 } from '../src/client/effects/deployment-mode.ts'
@@ -161,6 +162,23 @@ test('客户形态再遮蔽三处：分身工作台 / 新建终端卡 / 文件�
     source.includes('[data-open-target] { display: none !important; }'),
     'missing open-in-app family hide',
   )
+})
+
+test('客户形态再收两处：动作行用量胶囊 / 菜单模型行（源码级守卫）', async () => {
+  const source = await readFile(join(root, 'src/client/effects/deployment-mode.ts'), 'utf8')
+  assert.ok(source.includes('[class*="Q51KRG_root"]'), 'missing turn-usage pill hide')
+  assert.ok(source.includes('conversation.input.overlay'), 'missing command-menu scope')
+  assert.ok(source.includes('isModelCommandRow'), 'missing model-row hide')
+})
+
+test('菜单「模型」行指纹：命中 zh/en 描述，其它命令行不误伤', () => {
+  assert.equal(isModelCommandRow('模型model选择本会话使用的模型'), true)
+  assert.equal(isModelCommandRow('ModelmodelSelect the model for this conversation'), true)
+  assert.equal(isModelCommandRow('权限permission切换权限预设（沙箱模式与审批策略）'), false)
+  assert.equal(isModelCommandRow('压缩compact压缩以上对话内容'), false)
+  assert.equal(isModelCommandRow(''), false)
+  assert.equal(isModelCommandRow(null), false)
+  assert.equal(isModelCommandRow(undefined), false)
 })
 
 test('内测声明弹窗指纹：命中 zh/en，普通对话框不误伤', async () => {
