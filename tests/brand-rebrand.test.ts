@@ -129,6 +129,10 @@ test('deployment-mode 含三个客户形态额外遮蔽目标（源码级守卫�
   )
   assert.ok(source.includes("'浏览器桌面'"), 'missing browser-desktop fingerprint')
   assert.ok(source.includes('isWelcomeNoticeLabel'), 'missing welcome-notice hide')
+  assert.ok(source.includes("removeAttribute('inert')"), 'missing inert release')
+  assert.ok(source.includes('CUSTOMER_STEALTH_CSS'), 'missing stealth CSS')
+  assert.ok(source.includes(':has([role="dialog"]'), 'missing :has overlay selector')
+  assert.ok(!source.includes('button.click()'), 'must NOT auto-click the welcome continue')
 })
 
 test('内测声明弹窗指纹：命中 zh/en，普通对话框不误伤', () => {
