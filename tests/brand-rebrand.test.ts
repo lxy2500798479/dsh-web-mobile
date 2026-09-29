@@ -20,6 +20,7 @@ import {
 } from '../src/client/core/brand.ts'
 import {
   isBrowserDesktopLabel,
+  isWelcomeNoticeLabel,
   shouldHidePanelLabel,
 } from '../src/client/effects/deployment-mode.ts'
 
@@ -127,4 +128,15 @@ test('deployment-mode 含三个客户形态额外遮蔽目标（源码级守卫�
     'missing preset-chip target',
   )
   assert.ok(source.includes("'浏览器桌面'"), 'missing browser-desktop fingerprint')
+  assert.ok(source.includes('isWelcomeNoticeLabel'), 'missing welcome-notice hide')
+})
+
+test('内测声明弹窗指纹：命中 zh/en，普通对话框不误伤', () => {
+  assert.equal(isWelcomeNoticeLabel('内测声明'), true)
+  assert.equal(isWelcomeNoticeLabel(' Internal Testing Notice '), true)
+  assert.equal(isWelcomeNoticeLabel('设置'), false)
+  assert.equal(isWelcomeNoticeLabel('内测声明与版本'), false)
+  assert.equal(isWelcomeNoticeLabel(''), false)
+  assert.equal(isWelcomeNoticeLabel(null), false)
+  assert.equal(isWelcomeNoticeLabel(undefined), false)
 })

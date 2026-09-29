@@ -19,7 +19,10 @@ import { config } from '../config.ts'
  *  ① 移动壳「文件浏览」按钮（`data-mobile-nav="files"`，右上角文件夹图标）；
  *  ② 会话头部的预设 chip（`conversation.session.header.actions` 槽里的「标准模式」
  *     标签；槽容器 display:contents 无盒，遮蔽其 span 子元素）；
- *  ③ 侧栏页脚「浏览器桌面」入口（@runzhliu/dsh-browser-desktop，按文案指纹 zh/en 匹配）。
+ *  ③ 侧栏页脚「浏览器桌面」入口（@runzhliu/dsh-browser-desktop，按文案指纹 zh/en 匹配）；
+ *  ④ 「内测声明」弹窗（宿主 settings-models 的 welcome-notice 步骤；远程浏览器走
+ *     memory-mode 每次载入必弹且遮罩拦点击——按 `role="dialog"` + aria-label 指纹命中，
+ *     遮蔽其父 overlay（含 mask），zh/en 双文案）。
  * 三者只在手机壳 / 会话 active 期渲染，桌面视口天然不命中（死规则）。
  */
 
@@ -50,12 +53,22 @@ export function isBrowserDesktopLabel(label: string | null | undefined): boolean
   return BROWSER_DESKTOP_HINTS.some((hint) => lowered.includes(hint))
 }
 
+/** 「内测声明」弹窗的 aria-label 指纹（宿主 settings-models 的 welcome-notice 步骤）。 */
+const WELCOME_NOTICE_LABELS = new Set(['内测声明', 'Internal Testing Notice'])
+
+/** 该对话框是否属于「内测声明」弹窗（纯函数，供单测）。 */
+export function isWelcomeNoticeLabel(label: string | null | undefined): boolean {
+  return typeof label === 'string' && WELCOME_NOTICE_LABELS.has(label.trim())
+}
+
 /** 观察器触发用：任一客户形态遮蔽目标的选择器合集。 */
 const CUSTOMER_TARGET_SELECTOR = [
   SETTINGS_SEAT_SELECTOR,
   PANEL_ROW_SELECTOR,
   ...EXTRA_HIDDEN_SELECTORS,
   'button[aria-label*="浏览器桌面"]',
+  '[role="dialog"][aria-label="内测声明"]',
+  '[role="dialog"][aria-label="Internal Testing Notice"]',
 ].join(', ')
 
 /** 该面板行是否属于要隐藏的入口（纯函数，供单测）。 */
@@ -65,7 +78,7 @@ export function shouldHidePanelLabel(label: string | null | undefined): boolean 
 
 /**
  * 对 root 做一遍客户形态遮蔽（设置座位 + 目标面板行 + 文件浏览按钮 / 预设 chip /
- * 浏览器桌面入口）。
+ * 浏览器桌面入口 / 内测声明弹窗）。
  * @param root - 搜索根（挂载时全量，之后按新增子树增量）。
  * @returns 是否发生了改动。
  */
@@ -98,6 +111,16 @@ export function applyCustomerMode(root: ParentNode): boolean {
     if (!isBrowserDesktopLabel(button.getAttribute('aria-label'))) continue
     if (button.style.display !== 'none') {
       button.style.display = 'none'
+      changed = true
+    }
+  }
+  for (const dialog of root.querySelectorAll('[role="dialog"][aria-label]')) {
+    if (!(dialog instanceof HTMLElement)) continue
+    if (!isWelcomeNoticeLabel(dialog.getAttribute('aria-label'))) continue
+    // 对话框的父 = overlay 根（含 backdrop mask）；只遮父、不动 App 根（防差结构下把整页遮没）。
+    const overlay = dialog.parentElement instanceof HTMLElement ? dialog.parentElement : dialog
+    if (overlay.style.display !== 'none') {
+      overlay.style.display = 'none'
       changed = true
     }
   }
