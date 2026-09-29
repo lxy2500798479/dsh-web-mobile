@@ -183,7 +183,14 @@ test('头像首字：首字符大写，空串退化 ?', () => {
 test('账号行注册与「刻意跨宽度」：桌面退出入口是 2026-09-29 约定的例外（源码级守卫）', async () => {
   const index = await readFile(join(root, 'src/client/index.tsx'), 'utf8')
   assert.ok(index.includes("id: 'mobile-nav-account'"), 'missing account row registration')
-  assert.ok(index.includes('order: 20'), 'account row must sit at the footer bottom (order 20)')
+  assert.ok(
+    index.includes("id: 'mobile-nav-account',\n    order: 1,"),
+    'account row must sit above the session-log pill (order 1)',
+  )
+  assert.ok(
+    !index.includes("id: 'mobile-nav-account',\n    order: 20,"),
+    'stale footer-bottom order (20) must be gone from the account registration',
+  )
   const base = await readFile(join(root, 'src/client/styles/base.css.ts'), 'utf8')
   assert.ok(base.includes('[data-mobile-nav="account-button"]'), 'missing account row styles')
   // 桌面遮蔽块（misc.css.ts）不得包含 account 标记——客户桌面同样要有退出入口。

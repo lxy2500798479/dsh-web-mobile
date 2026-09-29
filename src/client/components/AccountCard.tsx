@@ -10,8 +10,8 @@ import { fetchPortalAccount, requestLogout, avatarInitial, type PortalAccount } 
  *
  * 为什么在这里：登录界面与工作台合并成单一入口后（门户 2026-09-29 改造），
  * 页面上不再有任何退出/换账号入口；dsh 实例自身无账号体系，身份与退出都在
- * 门户侧。本组件占 `sidebar.footer.action` 槽（order 20，压在会话日志 5、
- * 用量徽标 10 之下的最底部）；数据走同源 `GET /__portal/api/me`、退出走
+ * 门户侧。本组件占 `sidebar.footer.action` 槽（order 1：会话日志 5 与用量
+ * 徽标 10 之上、远程图标行之下）；数据走同源 `GET /__portal/api/me`、退出走
  * `POST /logout`（机制与边界见 account-card.ts）。拉不到身份（非门户环境/
  * 未登录）时整块不渲染。
  *

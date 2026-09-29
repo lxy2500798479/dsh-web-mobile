@@ -313,14 +313,16 @@ export function apply(ctx: ClientContext): void {
   // ---- 账号行 / 退出登录（客户线，2026-09-29）----
   // 登录入口与工作台合并成单一入口（门户 2026-09-29）后，页面上不再有任何
   // 退出/换账号入口；dsh 实例自身无账号体系，身份与退出都在门户侧。沿用同一
-  // 个 sidebar.footer.action 槽，order 20 压在最底（会话日志 5、用量徽标 10
-  // 之下）。组件拉不到门户身份（/__portal/api/me 不可达：直连实例/内网实验
-  // 实例）时整块不渲染。刻意跨宽度：客户桌面浏览器同样需要退出入口（桌面
-  // no-op 承诺的 2026-09-29 例外，见 AGENTS.md 与 misc.css.ts 遮蔽块注记）。
+  // 个 sidebar.footer.action 槽，order 1 置于「导出会话日志」pill（5）与用量
+  // 徽标（10）之上、远程图标行（默认 0）之下（用户 2026-09-29 口径：账号行要
+  // 在会话日志之上；初版 order 20 压最底被否）。组件拉不到门户身份
+  // （/__portal/api/me 不可达：直连实例/内网实验实例）时整块不渲染。刻意跨
+  // 宽度：客户桌面浏览器同样需要退出入口（桌面 no-op 承诺的 2026-09-29 例外，
+  // 见 AGENTS.md 与 misc.css.ts 遮蔽块注记）。
   ctx.slots.inject('sidebar.footer.action', () => ctx.slots.register({
     name: 'sidebar.footer.action',
     id: 'mobile-nav-account',
-    order: 20,
+    order: 1,
     locale: NS,
     inject: () => ({}),
   }, AccountCard))
