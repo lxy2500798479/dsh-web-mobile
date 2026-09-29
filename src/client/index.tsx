@@ -2,6 +2,7 @@ import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
 import { MobileNavToggle } from './components/MobileNavToggle.tsx'
 import { MobileDrawerFooter } from './components/MobileDrawerFooter.tsx'
 import { ComposerFileButton } from './components/ComposerFileButton.tsx'
+import { FileDownloadButton, FileDownloadEmpty } from './components/FileDownloadButton.tsx'
 import { openFilesPanel } from './components/open-files-panel.ts'
 import { MOBILE_CSS } from './styles/index.ts'
 import { HeroBrandMark, SidebarBrandMark, SidebarBrandName } from './components/ShibeiBrand.tsx'
@@ -321,6 +322,27 @@ export function apply(ctx: ClientContext): void {
     locale: NS,
     inject: () => ({}),
   }, ComposerFileButton))
+
+  // ---- 文件下载（客户线，2026-09-29）----
+  // 宿主 Web 端没有任何「把文件存到本机」的入口（预览=只读渲染；native open 只
+  // 在有桌面宿主的桌面版存在），客户在 iOS PWA 上因此拿不到容器里的文件。占
+  // 官方为第三方预留的两个插槽：文档预览页头 + 不可预览空态。字节走宿主既有
+  // api/file 路由（cookie 鉴权）；落盘优先 Web Share 面板（iOS standalone 下
+  // 唯一可靠路径：存到「文件」/转发微信），桌面与非 iOS 回退锚点下载。机制与
+  // 边界见 core/file-download.ts 与组件文件头；槽位在旧宿主缺席时惰性为零。
+  ctx.slots.inject('sidebar.right.tab.document.actions', () => ctx.slots.register({
+    name: 'sidebar.right.tab.document.actions',
+    id: 'mobile-nav-download',
+    order: 20,
+    locale: NS,
+  }, FileDownloadButton))
+
+  ctx.slots.inject('sidebar.right.tab.document.unpreviewable', () => ctx.slots.register({
+    name: 'sidebar.right.tab.document.unpreviewable',
+    id: 'mobile-nav-download',
+    order: 20,
+    locale: NS,
+  }, FileDownloadEmpty))
 
   // ---- 拾贝起源品牌位（2026-09-28）----
   // 官方预留的品牌组合路径就是「占据 slot」（brand-official README「替换品牌」

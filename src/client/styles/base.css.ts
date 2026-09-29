@@ -65,6 +65,80 @@ export const BASE_CSS = `
   cursor: default;
 }
 
+/* File download: the customer's only way to take a container file onto the
+   device (host Web has no download surface; iOS standalone PWA ignores
+   anchor downloads, so the control hands the file to the Web Share sheet).
+   Two forms — compact in the document toolbar, prominent in the
+   unpreviewable empty state. DELIBERATELY cross-width: a customer's desktop
+   browser has the same gap, so this marker is NOT in the desktop hide
+   block. Colors and states follow the header controls above. */
+[data-mobile-nav="download"] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 28px;
+  height: 28px;
+  flex: none;
+  padding: 0 4px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary, inherit);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 20px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+[data-mobile-nav="download"]:hover:not(:disabled) {
+  background: var(--dsw-alias-interactive-bg-hover, rgba(0, 0, 0, .06));
+}
+[data-mobile-nav="download"]:disabled {
+  opacity: .55;
+  cursor: default;
+}
+[data-mobile-nav="download"]:focus-visible {
+  outline: 2px solid var(--dsw-alias-state-business-primary, #4f6ef7);
+  outline-offset: 1px;
+}
+[data-mobile-nav="download"][data-state="error"] {
+  color: var(--dsw-alias-state-error-primary, #b91c1c);
+}
+[data-mobile-nav="download-empty"] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid var(--dsw-alias-border-l1, rgba(0, 0, 0, .12));
+  border-radius: 12px;
+  background: transparent;
+  color: var(--dsw-alias-label-primary, inherit);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 20px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+[data-mobile-nav="download-empty"]:hover:not(:disabled) {
+  background: var(--dsw-alias-interactive-bg-hover, rgba(0, 0, 0, .06));
+}
+[data-mobile-nav="download-empty"]:disabled {
+  opacity: .55;
+  cursor: default;
+}
+[data-mobile-nav="download-empty"][data-state="error"] {
+  color: var(--dsw-alias-state-error-primary, #b91c1c);
+}
+[data-mobile-nav="download-label"] {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 12em;
+}
+
 [data-mobile-nav="delete-confirm-title"] {
   font-size: 16px;
   font-weight: 500;

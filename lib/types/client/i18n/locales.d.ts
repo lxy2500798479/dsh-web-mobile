@@ -9,6 +9,10 @@ export declare const zh: {
     readonly sessionLog: "导出会话日志";
     readonly files: "文件浏览";
     readonly fileUpload: "添加文件";
+    readonly download: "下载";
+    readonly downloadTooLarge: "文件过大，无法直接下载";
+    readonly downloadMissing: "文件不存在或已被删除";
+    readonly downloadFailed: "下载失败，请重试";
     readonly previewFullscreen: "全屏预览";
     readonly previewExitFullscreen: "退出全屏";
     readonly deleteSession: "删除会话";
