@@ -28,9 +28,11 @@ export const PORTAL_ME_PATH = '/__portal/api/me'
 /** 门户退出端点（POST；应答清除会话 cookie 并 303 回 `/`）。 */
 export const PORTAL_LOGOUT_PATH = '/logout'
 
-/** 账号行的可用身份：展示用账号名（Matrix localpart，如 sbqy01）。 */
+/** 账号行的可用身份：展示用账号名（Matrix localpart）+ 名册姓名（可选）。 */
 export interface PortalAccount {
   readonly username: string
+  /** 名册姓名（门户 Member.displayName，如「李六兵」）；缺名册/未填 = null。 */
+  readonly displayName: string | null
 }
 
 /**
@@ -47,17 +49,25 @@ export function accountLocalpart(raw: string): string | null {
 
 /**
  * 校验 `GET /__portal/api/me` 应答；不合形（未登录 ok:false、旧门户、
- * 中间层 HTML）一律 null。
+ * 中间层 HTML）一律 null。`displayName` 可选：非字符串/空白 = null
+ * （客户端回落 localpart，旧门户应答天然兼容）。
  */
 export function parsePortalAccount(value: unknown): PortalAccount | null {
   if (typeof value !== 'object' || value === null) return null
   const record = value as Record<string, unknown>
   if (record.ok !== true || typeof record.account !== 'string') return null
   const username = accountLocalpart(record.account)
-  return username === null ? null : { username }
+  if (username === null) return null
+  const rawName = typeof record.displayName === 'string' ? record.displayName.trim() : ''
+  return { username, displayName: rawName.length > 0 ? rawName : null }
 }
 
-/** 头像首字：localpart 首字符大写（数字原样）；空串退化 `?`。 */
+/** 账号行的展示名：名册姓名（displayName）优先，缺省回落 localpart。 */
+export function accountDisplayName(account: PortalAccount): string {
+  return account.displayName ?? account.username
+}
+
+/** 头像首字：展示名首字符大写（数字/汉字原样）；空串退化 `?`。 */
 export function avatarInitial(username: string): string {
   return (username.charAt(0) || '?').toUpperCase()
 }

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { PropsLocale } from '@deepseek-ai/dsh-client-ui-slots'
 import { NS } from '../i18n/locales.ts'
 import {
+  accountDisplayName,
   avatarInitial,
   fetchPortalAccount,
   requestLogout,
@@ -29,6 +30,12 @@ import {
  * 徽标 10 之上、远程图标行之下）；数据走同源 `GET /__portal/api/me`、退出走
  * `POST /logout`（机制与边界见 account-card.ts）。拉不到身份（非门户环境/
  * 未登录）时整块不渲染。
+ *
+ * 展示名（2026-09-30）：门户 `/__portal/api/me` 的 `displayName`（名册姓名，
+ * 如「李六兵」）优先，缺名册回落 localpart；密码接口只用 username。
+ * 侧栏折叠（宿主 frame 的 `data-sidebar-collapsed="true"`，56px 图标轨道）时
+ * 只留头像——名字隐藏与菜单溢出释放规则在 base.css.ts（轨道里放不下，实测
+ * 名字会把行撑到 87px 并左右溢出、菜单会被宿主列的 overflow:hidden 裁掉）。
  *
  * 刻意跨宽度（桌面也渲染）：客户用电脑浏览器（鼠标指针）经门户访问时同样
  * 需要退出入口，所以标记 `account` 不在 misc.css.ts 的桌面遮蔽名单里——
@@ -98,6 +105,9 @@ export function AccountCard({ t }: PropsLocale<typeof NS>) {
 
   if (account === null) return null
 
+  // 展示名：名册姓名（中文名）优先，缺省回落 localpart；密码接口只用 username。
+  const label = accountDisplayName(account)
+
   const logout = (): void => {
     if (busy) return
     setBusy(true)
@@ -161,13 +171,13 @@ export function AccountCard({ t }: PropsLocale<typeof NS>) {
       <button
         type="button"
         data-mobile-nav="account-button"
-        aria-label={t('accountLabel', { name: account.username })}
+        aria-label={t('accountLabel', { name: label })}
         aria-haspopup="menu"
         aria-expanded={menuOpen}
         onClick={() => setMenuOpen((open) => !open)}
       >
-        <span data-mobile-nav="account-avatar" aria-hidden="true">{avatarInitial(account.username)}</span>
-        <span data-mobile-nav="account-name">{account.username}</span>
+        <span data-mobile-nav="account-avatar" aria-hidden="true">{avatarInitial(label)}</span>
+        <span data-mobile-nav="account-name">{label}</span>
       </button>
       {menuOpen ? (
         <div data-mobile-nav="account-menu" role="menu">

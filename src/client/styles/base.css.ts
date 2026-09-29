@@ -124,6 +124,27 @@ export const BASE_CSS = `
   white-space: nowrap;
   text-overflow: ellipsis;
 }
+/* Host sidebar collapsed (56px icon rail): the host frame (= [data-dsh-frame])
+   carries data-sidebar-collapsed="true" while collapsed and drops the
+   attribute again on expand. The rail's foot area is only ~40px wide — the row
+   WITH the name inflates it to ~87px, clipping the avatar half outside the
+   rail and spilling the name over the main pane (customer rig screenshot,
+   2026-09-29). Collapsed = avatar only, exactly like the host's own rail items
+   (avatar center lands on the same 28px axis; measured on the local rig). */
+[data-dsh-frame][data-sidebar-collapsed="true"] [data-mobile-nav="account-name"] {
+  display: none;
+}
+/* The host column [data-pane="sidebar"] is overflow:hidden, so a rail-opened
+   account menu would be clipped at the 56px rail edge (measured: only the
+   leftmost ~48px of the 168px popover stayed hit-testable; the rest fell
+   through to the composer seat). While the menu is open — and only then —
+   release the column's clip; the menu's own z-index 40 wins the stacking over
+   the main pane (measured on the local rig: menu fully hit-testable, logout
+   button reachable). Scoped with :has to the menu element itself, so the
+   host's clip is untouched in every other state. */
+[data-dsh-frame][data-sidebar-collapsed="true"]:has([data-mobile-nav="account-menu"]) [data-pane="sidebar"] {
+  overflow: visible;
+}
 /* Host-menu recipe (Menu.module.css): translucent surface fill + 40px blur,
    elevation-prominent card (hairline stroke + shadows), radius-lg; rows take
    label-primary / interactive-bg-hover so both themes resolve correctly.

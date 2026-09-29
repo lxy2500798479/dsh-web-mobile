@@ -36,6 +36,7 @@ import {
 } from '../src/client/effects/deployment-mode.ts'
 import { config, maskEnabled } from '../src/client/config.ts'
 import {
+  accountDisplayName,
   accountLocalpart,
   avatarInitial,
   parsePortalAccount,
@@ -226,13 +227,59 @@ test('账号 localpart 提取：Matrix 全名与裸账号，畸形输入不产�
 test('门户身份应答判据：ok:true + account 才算数（未登录/HTML 中间页一律 null）', () => {
   assert.deepEqual(
     parsePortalAccount({ ok: true, account: '@sbqy01:im.10rig.com', customer: 'zb' }),
-    { username: 'sbqy01' },
+    { username: 'sbqy01', displayName: null },
   )
   assert.equal(parsePortalAccount({ ok: false, error: 'not_authenticated' }), null)
   assert.equal(parsePortalAccount({ ok: true }), null)
   assert.equal(parsePortalAccount({ ok: true, account: '@:im.10rig.com' }), null)
   assert.equal(parsePortalAccount('<!doctype html>'), null)
   assert.equal(parsePortalAccount(null), null)
+})
+
+test('门户身份应答：名册姓名（displayName）可选透传；空白/非字符串 = null', () => {
+  assert.deepEqual(
+    parsePortalAccount({ ok: true, account: '@liliubing:im.10rig.com', displayName: '李六兵' }),
+    { username: 'liliubing', displayName: '李六兵' },
+  )
+  assert.deepEqual(
+    parsePortalAccount({ ok: true, account: '@liliubing:im.10rig.com', displayName: ' 李六兵\n' }),
+    { username: 'liliubing', displayName: '李六兵' },
+  )
+  assert.deepEqual(
+    parsePortalAccount({ ok: true, account: '@liliubing:im.10rig.com' }),
+    { username: 'liliubing', displayName: null },
+  )
+  assert.deepEqual(
+    parsePortalAccount({ ok: true, account: '@liliubing:im.10rig.com', displayName: '   ' }),
+    { username: 'liliubing', displayName: null },
+  )
+  assert.deepEqual(
+    parsePortalAccount({ ok: true, account: '@liliubing:im.10rig.com', displayName: 7 }),
+    { username: 'liliubing', displayName: null },
+  )
+})
+
+test('账号行展示名：中文名优先、缺省回落 localpart；头像首字取展示名', () => {
+  assert.equal(accountDisplayName({ username: 'liliubing', displayName: '李六兵' }), '李六兵')
+  assert.equal(accountDisplayName({ username: 'liliubing', displayName: null }), 'liliubing')
+  assert.equal(avatarInitial('李六兵'), '李')
+  assert.equal(avatarInitial('sbqy01'), 'S')
+})
+
+test('侧栏折叠自适应：宿主折叠态（data-sidebar-collapsed）账号行只留头像（源码级守卫）', async () => {
+  const base = await readFile(join(root, 'src/client/styles/base.css.ts'), 'utf8')
+  assert.ok(
+    base.includes('[data-dsh-frame][data-sidebar-collapsed="true"] [data-mobile-nav="account-name"]'),
+    'missing collapsed-sidebar account-name hide',
+  )
+  assert.ok(
+    base.includes(
+      '[data-dsh-frame][data-sidebar-collapsed="true"]:has([data-mobile-nav="account-menu"]) [data-pane="sidebar"]',
+    ),
+    'missing collapsed-sidebar menu overflow release',
+  )
+  const card = await readFile(join(root, 'src/client/components/AccountCard.tsx'), 'utf8')
+  assert.ok(card.includes('accountDisplayName('), 'account row must show the roster display name')
 })
 
 test('头像首字：首字符大写，空串退化 ?', () => {
