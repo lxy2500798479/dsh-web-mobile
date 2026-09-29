@@ -36,6 +36,7 @@ import {
   accountLocalpart,
   avatarInitial,
   parsePortalAccount,
+  validatePasswordForm,
 } from '../src/client/components/account-card.ts'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
@@ -297,4 +298,25 @@ test('页面版本跟随已接进客户线入口，且仅客户形态安装（�
   assert.notEqual(at, -1, 'missing installAutoReload export')
   const section = source.slice(at, at + 300)
   assert.ok(section.includes('if (config.devMode) return'), 'auto reload must install in customer form only')
+})
+
+test('改密弹窗（2026-09-29 晚）：菜单项 / 居中弹窗标记 / 门户端点 / 表单校验（源码级守卫）', async () => {
+  const card = await readFile(join(root, 'src/client/components/AccountCard.tsx'), 'utf8')
+  assert.ok(card.includes('data-mobile-nav="account-password"'), 'missing password menu item')
+  assert.ok(card.includes('data-mobile-nav="account-password-overlay"'), 'missing centered overlay')
+  assert.ok(card.includes('data-mobile-nav="account-password-dialog"'), 'missing centered dialog card')
+  for (const marker of ['password-old', 'password-new', 'password-confirm', 'password-error', 'password-submit', 'password-cancel']) {
+    assert.ok(card.includes(`data-mobile-nav="${marker}"`), `missing dialog marker ${marker}`)
+  }
+  // 无感语义的源码锚：成功后不跳转、由门户在同一响应轮换会话（注释钉在组件里）。
+  assert.ok(card.includes('不跳转、不刷新'), 'missing seamless-rotation note')
+  const data = await readFile(join(root, 'src/client/components/account-card.ts'), 'utf8')
+  assert.ok(data.includes("PORTAL_PASSWORD_PATH = '/__portal/api/password'"), 'missing portal password endpoint')
+  assert.equal(validatePasswordForm({ oldPassword: '', newPassword: 'longenough', confirmPassword: 'longenough' }), 'fill')
+  assert.equal(validatePasswordForm({ oldPassword: 'a', newPassword: 'short', confirmPassword: 'short' }), 'short')
+  assert.equal(validatePasswordForm({ oldPassword: 'a', newPassword: 'longenough1', confirmPassword: 'longenough2' }), 'mismatch')
+  assert.equal(validatePasswordForm({ oldPassword: 'a', newPassword: 'longenough1', confirmPassword: 'longenough1' }), null)
+  const base = await readFile(join(root, 'src/client/styles/base.css.ts'), 'utf8')
+  assert.ok(base.includes('[data-mobile-nav="account-password-dialog"]'), 'missing dialog styles')
+  assert.ok(base.includes('[data-mobile-nav="account-password-overlay"]'), 'missing overlay styles')
 })

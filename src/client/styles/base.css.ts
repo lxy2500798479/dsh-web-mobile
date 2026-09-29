@@ -145,7 +145,8 @@ export const BASE_CSS = `
   -webkit-backdrop-filter: var(--dsw-menu-backdrop-filter, blur(40px) saturate(150%));
   backdrop-filter: var(--dsw-menu-backdrop-filter, blur(40px) saturate(150%));
 }
-[data-mobile-nav="account-logout"] {
+[data-mobile-nav="account-logout"],
+[data-mobile-nav="account-password"] {
   display: flex;
   align-items: center;
   width: 100%;
@@ -162,15 +163,121 @@ export const BASE_CSS = `
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
-[data-mobile-nav="account-logout"]:hover:not(:disabled) {
+[data-mobile-nav="account-logout"]:hover:not(:disabled),
+[data-mobile-nav="account-password"]:hover:not(:disabled) {
   background: var(--dsw-alias-interactive-bg-hover, rgba(0, 0, 0, .06));
 }
-[data-mobile-nav="account-logout"]:focus-visible {
+[data-mobile-nav="account-logout"]:focus-visible,
+[data-mobile-nav="account-password"]:focus-visible {
   outline: 2px solid var(--dsw-alias-state-business-primary, #4f6ef7);
   outline-offset: 1px;
 }
 [data-mobile-nav="account-logout"]:disabled {
   color: var(--dsw-alias-label-dimmed, rgba(0, 0, 0, .35));
+  cursor: default;
+}
+
+/* Password-change dialog (2026-09-29 late, owner request): opened from the
+   account menu; a centered modal that stays BELOW the settled-toast band
+   (1500) and ABOVE the host menu band (1100) and the mobile drawer's raised
+   rules (1400). The card reuses the host menu-surface recipe so it reads
+   correctly in both themes; the overlay dims the page (design: center card,
+   per owner ask). Fixed positioning is deliberate — the rig asserts viewport
+   centering (desktop.password-dialog) because the account row lives inside
+   the sidebar/drawer subtree. */
+[data-mobile-nav="account-password-overlay"] {
+  position: fixed;
+  inset: 0;
+  z-index: 1450;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(15, 17, 20, .38);
+}
+[data-mobile-nav="account-password-dialog"] {
+  width: 100%;
+  max-width: 340px;
+  box-sizing: border-box;
+  padding: 18px 16px 14px;
+  border-radius: var(--dsw-radius-lg, 12px);
+  --dsw-elevation-stroke-color: var(--dsw-alias-border-l1, rgba(0, 0, 0, .04));
+  box-shadow: var(--dsw-elevation-prominent, 0 0 0 .5px rgba(0, 0, 0, .04), 0 3px 8px 0 rgba(0, 0, 0, .04), 0 0 20px 0 rgba(0, 0, 0, .05));
+  background: var(--dsw-menu-surface-fill, #f8f9fa94);
+  -webkit-backdrop-filter: var(--dsw-menu-backdrop-filter, blur(40px) saturate(150%));
+  backdrop-filter: var(--dsw-menu-backdrop-filter, blur(40px) saturate(150%));
+  color: var(--dsw-alias-label-primary, inherit);
+}
+[data-mobile-nav="account-password-dialog"] h3 {
+  margin: 0 0 12px;
+  font-size: 16px;
+  font-weight: 600;
+}
+[data-mobile-nav="password-old"],
+[data-mobile-nav="password-new"],
+[data-mobile-nav="password-confirm"] {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  border-radius: var(--dsw-radius-md, 8px);
+  border: 1px solid color-mix(in srgb, var(--dsw-alias-label-primary, #000) 22%, transparent);
+  background: transparent;
+  color: var(--dsw-alias-label-primary, inherit);
+  font-family: inherit;
+  /* ≥16px：iOS 聚焦输入框不触发页面自动缩放 */
+  font-size: 16px;
+  outline: none;
+}
+[data-mobile-nav="password-old"]:focus,
+[data-mobile-nav="password-new"]:focus,
+[data-mobile-nav="password-confirm"]:focus {
+  border-color: var(--dsw-alias-state-business-primary, #4f6ef7);
+}
+[data-mobile-nav="password-error"] {
+  margin: 0 0 10px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #d64545;
+}
+[data-mobile-nav="password-updated"] {
+  margin: 0 0 10px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #2f9e44;
+}
+[data-mobile-nav="password-actions"] {
+  display: flex;
+  gap: 10px;
+  margin-top: 2px;
+}
+[data-mobile-nav="password-cancel"],
+[data-mobile-nav="password-submit"] {
+  flex: 1;
+  padding: 10px;
+  border-radius: var(--dsw-radius-md, 8px);
+  border: none;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+[data-mobile-nav="password-cancel"] {
+  background: transparent;
+  color: var(--dsw-alias-label-primary, inherit);
+  border: 1px solid color-mix(in srgb, var(--dsw-alias-label-primary, #000) 22%, transparent);
+}
+[data-mobile-nav="password-cancel"]:disabled {
+  opacity: .55;
+  cursor: default;
+}
+[data-mobile-nav="password-submit"] {
+  background: var(--dsw-alias-state-business-primary, #4f6ef7);
+  color: var(--dsw-alias-label-primary-foreground, #fff);
+}
+[data-mobile-nav="password-submit"]:disabled {
+  opacity: .6;
   cursor: default;
 }
 
