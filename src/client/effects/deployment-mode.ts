@@ -2,7 +2,7 @@ import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
 import { config } from '../config.ts'
 
 /**
- * 部署形态（2026-09-28，拾贝起源生产形态）：按 `config.devMode` 收/放三类入口。
+ * 部署形态（2026-09-28，中贝通信生产形态）：按 `config.devMode` 收/放三类入口。
  *
  * 两条路线：
  *  1) 宿主官方门 —— 轨迹 / 本轮代码差异 / 预设切换 由宿主 `ui-settings` 命名空间的
@@ -28,6 +28,10 @@ import { config } from '../config.ts'
  *        程序化 click 不受影响，曾据此误判过「无阻塞」）；
  *     ③ **不代点**（店主口径：不让用户看到这个窗口即可，不触发其确认动作）；
  *     ④ 观察器盯住 inert 属性，宿主重加即再摘。
+ *  ⑤ ui-open-in-app 的「在文件夹中打开」控件（预览页头 + 交付卡片；容器里没有
+ *     可用的本机文件管理器，宿主因实例开了 DSH_DESKTOP_ENABLED 而渲染它，客户
+ *     点它没有任何结果——2026-09-29 店主实机「点了也没有用」）。CSS 首帧遮蔽；
+ *     交付卡片的下载位由本插件 DeliverableDownloadButton 补上。
  * 三者只在手机壳 / 会话 active 期渲染，桌面视口天然不命中（死规则）。
  */
 
@@ -79,6 +83,10 @@ const WELCOME_DIALOG_SELECTOR = [
 const CUSTOMER_STEALTH_CSS = [
   'body > div:not(#root):has([role="dialog"][aria-label="内测声明"]) { display: none !important; }',
   'body > div:not(#root):has([role="dialog"][aria-label="Internal Testing Notice"]) { display: none !important; }',
+  // ui-open-in-app 的「在文件夹中打开/应用打开」（预览页头与交付卡片共用标记
+  // data-open-target="file"）：容器形态里没有可用的本机文件管理器，是死按钮
+  // （2026-09-29 店主实机反馈）。首帧即隐形；后续新节点天然命中，无需观察器。
+  '[data-open-target="file"] { display: none !important; }',
 ].join('\n')
 
 if (!config.devMode && typeof document !== 'undefined') {

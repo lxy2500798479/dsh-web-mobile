@@ -3,6 +3,7 @@ import { MobileNavToggle } from './components/MobileNavToggle.tsx'
 import { MobileDrawerFooter } from './components/MobileDrawerFooter.tsx'
 import { ComposerFileButton } from './components/ComposerFileButton.tsx'
 import { FileDownloadButton, FileDownloadEmpty } from './components/FileDownloadButton.tsx'
+import { DeliverableDownloadButton } from './components/DeliverableDownloadButton.tsx'
 import { openFilesPanel } from './components/open-files-panel.ts'
 import { MOBILE_CSS } from './styles/index.ts'
 import { HeroBrandMark, SidebarBrandMark, SidebarBrandName } from './components/ShibeiBrand.tsx'
@@ -345,6 +346,17 @@ export function apply(ctx: ClientContext): void {
     order: 20,
     locale: NS,
   }, FileDownloadEmpty))
+
+  // 交付卡片（聊天里发到手上的文件）同样给「下载」：卡片右侧的宿主控件是
+  // ui-open-in-app（实例开了 DSH_DESKTOP_ENABLED 才被渲染），在容器形态点了
+  // 没有任何结果——客户形态由 deployment-mode 的 CSS 遮蔽它，这里补上直接下载。
+  // 绝对路径在点击时从卡片自身的预览覆盖层 title 读（槽 owner 只给会话内坐标）。
+  ctx.slots.inject('deliverables.file.actions', () => ctx.slots.register({
+    name: 'deliverables.file.actions',
+    id: 'mobile-nav-download',
+    order: 20,
+    locale: NS,
+  }, DeliverableDownloadButton))
 
   // ---- 拾贝起源品牌位（2026-09-28）----
   // 官方预留的品牌组合路径就是「占据 slot」（brand-official README「替换品牌」

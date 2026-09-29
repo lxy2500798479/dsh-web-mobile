@@ -13,6 +13,8 @@ export declare const zh: {
     readonly downloadTooLarge: "文件过大，无法直接下载";
     readonly downloadMissing: "文件不存在或已被删除";
     readonly downloadFailed: "下载失败，请重试";
+    readonly downloadStarted: "已开始下载：{name}";
+    readonly downloadShared: "已保存或已分享：{name}";
     readonly previewFullscreen: "全屏预览";
     readonly previewExitFullscreen: "退出全屏";
     readonly deleteSession: "删除会话";

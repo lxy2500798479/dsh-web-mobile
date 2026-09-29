@@ -139,6 +139,76 @@ export const BASE_CSS = `
   max-width: 12em;
 }
 
+/* Delivery-card download (customer line, 2026-09-29): the chat card's own
+   control. The host's open-in-app control on the same card is a dead button
+   in the container shape and is shadowed in customer mode (deployment-mode);
+   geometry follows the host's compact file actions (28px, radius 8). */
+[data-mobile-nav="download-card"] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary, inherit);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+[data-mobile-nav="download-card"]:hover:not(:disabled) {
+  background: var(--dsw-alias-interactive-bg-hover, rgba(0, 0, 0, .06));
+}
+[data-mobile-nav="download-card"]:disabled {
+  opacity: .55;
+  cursor: default;
+}
+[data-mobile-nav="download-card"]:focus-visible {
+  outline: 2px solid var(--dsw-alias-state-business-primary, #4f6ef7);
+  outline-offset: 1px;
+}
+[data-mobile-nav="download-card"][data-state="error"] {
+  color: var(--dsw-alias-state-error-primary, #b91c1c);
+}
+
+/* Settled-delivery toast (both download surfaces): the share sheet and the
+   streamed download are silent by construction, so a settled success earns
+   one short confirmation (2026-09-29 customer report「下载成功了也没有提示」).
+   Above the fork's top band (1250) and the host's dialog band (1400s);
+   pointer-events stay off so it never eats a tap. */
+[data-mobile-nav="toast"] {
+  position: fixed;
+  left: 50%;
+  bottom: calc(104px + env(safe-area-inset-bottom, 0px));
+  z-index: 1500;
+  max-width: min(86vw, 420px);
+  padding: 9px 14px;
+  border-radius: 10px;
+  background: rgba(28, 28, 32, .92);
+  color: #fff;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 20px;
+  text-align: center;
+  overflow-wrap: anywhere;
+  opacity: 0;
+  visibility: hidden;
+  transform: translate(-50%, 8px);
+  pointer-events: none;
+  transition: opacity 180ms ease, transform 180ms ease, visibility 0s linear 180ms;
+}
+[data-mobile-nav="toast"][data-visible="true"] {
+  opacity: 1;
+  visibility: visible;
+  transform: translate(-50%, 0);
+  transition: opacity 180ms ease, transform 180ms ease, visibility 0s;
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-mobile-nav="toast"] { transition: none; }
+}
+
 [data-mobile-nav="delete-confirm-title"] {
   font-size: 16px;
   font-weight: 500;

@@ -5,8 +5,12 @@
 // dsh-web-ui-all it painted an icon that did nothing at all.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { join, dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { openFilesPanel, HOST_FILES_CLOSER, HOST_FILES_OPENER } from '../src/client/components/open-files-panel.ts'
 import { deliverFile, fileDownloadRoute, fileNameFromPath, type FileDeliveryEnvironment } from '../src/client/core/file-download.ts'
+import { downloadToastFor } from '../src/client/core/download-feedback.ts'
 
 const openerDoc = (found: unknown) => ({ querySelector: (selector: string) => (selector === HOST_FILES_OPENER ? found : null) })
 const bothDoc = (opener: unknown, closer: unknown) => ({ querySelector: (selector: string) => (selector === HOST_FILES_OPENER ? opener : selector === HOST_FILES_CLOSER ? closer : null) })
@@ -212,4 +216,43 @@ test('deliverFile: a blocked download navigation reports the generic failure', a
   const outcome = await deliverFile('/workspace/a.bin', fakeEnvironment({ calls, downloadError: true }))
   assert.deepEqual(calls, ['head', 'canShare', 'download'])
   assert.deepEqual(outcome, { kind: 'failed', failure: 'failed' })
+})
+
+// ---- 下载成功反馈 + 交付卡片下载（2026-09-29 第二版：店主实机「下载成功了也没
+// 有提示」/ 卡片右侧宿主控件「点了也没有用」）----
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
+const readSource = (path: string): string => readFileSync(join(ROOT, path), 'utf8')
+
+test('downloadToastFor: settled successes toast, cancelled/failed stay silent', () => {
+  assert.deepEqual(downloadToastFor({ kind: 'shared' }, '/ws/报告 v2.docx'), { key: 'downloadShared', name: '报告 v2.docx' })
+  assert.deepEqual(downloadToastFor({ kind: 'saved' }, '/ws/report.pdf'), { key: 'downloadStarted', name: 'report.pdf' })
+  // 取消 = 用户决定，失败已由控件自身文案承载——都不许再弹 toast。
+  assert.equal(downloadToastFor({ kind: 'cancelled' }, '/ws/a.bin'), null)
+  assert.equal(downloadToastFor({ kind: 'failed', failure: 'missing' }, '/ws/a.bin'), null)
+})
+
+test('both download surfaces raise the settled-success toast', () => {
+  const header = readSource('src/client/components/FileDownloadButton.tsx')
+  assert.ok(header.includes('downloadToastFor(outcome, absolutePath)'))
+  assert.ok(header.includes('showToast('))
+  const card = readSource('src/client/components/DeliverableDownloadButton.tsx')
+  assert.ok(card.includes('downloadToastFor(outcome, path)'))
+  assert.ok(card.includes('showToast('))
+})
+
+test('the card control reads the absolute path off the card and never guesses', () => {
+  const source = readSource('src/client/components/DeliverableDownloadButton.tsx')
+  // 预览覆盖层（宿主 cardPreview）是卡上唯一携带绝对路径的节点。
+  assert.ok(source.includes('button[class*="cardPreview"]'))
+  assert.ok(source.includes("closest('[data-presented-file]')"))
+  // 路径形状守卫：不像绝对路径（/ 或盘符）就报失败，不猜。
+  assert.ok(source.includes("title.startsWith('/')"))
+  assert.ok(source.includes('^[A-Za-z]:'))
+})
+
+test('the card control is registered into the reserved slot and the host control is shadowed', () => {
+  assert.ok(readSource('src/client/index.tsx').includes("ctx.slots.inject('deliverables.file.actions'"))
+  // 宿主的 open-in-app 控件（预览页头 + 交付卡片共用标记）在客户形态被 CSS 遮蔽。
+  const mode = readSource('src/client/effects/deployment-mode.ts')
+  assert.ok(mode.includes('[data-open-target="file"] { display: none !important; }'))
 })

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import { IconDownload } from '../core/icon-compat.ts'
 import { createBrowserEnvironment, deliverFile, type FileDeliveryEnvironment } from '../core/file-download.ts'
+import { downloadToastFor, showToast } from '../core/download-feedback.ts'
 import { NS } from '../i18n/locales.ts'
 
 /**
@@ -80,6 +81,10 @@ function FileDownloadControl({ absolutePath, prominent, t }: FileDownloadControl
     void deliverFile(absolutePath, environment.current).then((outcome) => {
       if (outcome.kind !== 'failed') {
         setPhase({ kind: 'idle' })
+        // 成功反馈（店主实机：『下载成功了 也没有提示』）——分享与流式下载都是
+        // 静默收尾，没有这一条客户无从确认点击是否生效。
+        const feedback = downloadToastFor(outcome, absolutePath)
+        if (feedback !== null) showToast(t(feedback.key, { name: feedback.name }))
         return
       }
       setPhase({ kind: 'failed', failure: outcome.failure })
