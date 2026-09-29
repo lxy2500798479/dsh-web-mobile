@@ -1,14 +1,17 @@
 import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
-import { config } from '../config.ts'
+import { config, maskEnabled, type MaskItemId } from '../config.ts'
 
 /**
- * 部署形态（2026-09-28，中贝通信生产形态）：按 `config.devMode` 收/放三类入口。
+ * 部署形态（2026-09-28，中贝通信生产形态）：按 `config.mask`（总开关 + 逐项）收/放入口。
+ * 2026-09-29 开关化：清单数据化为「每项一配置」——各执行器按项过滤（清单本体在
+ * config.ts），本文件只做机制；回开/追加某项 = 改 `config.mask.items` 一行，
+ * 守卫测试（tests/brand-rebrand.test.ts）对账两处清单与默认全遮。
  *
  * 两条路线：
  *  1) 宿主官方门 —— 轨迹 / 本轮代码差异 / 预设切换 由宿主 `ui-settings` 命名空间的
  *     `developerTools` 偏好门控（宿主默认 true = 全开）。这里在启动后把它同步成
- *     `config.devMode`：官方各自渲染器自行隐藏，零 DOM 侵入。旧宿主（rc.6 线）没有
- *     `configForms` 服务 → inject 回调不触发，整段惰性，不报错。
+ *     `mask.devtools` 项的语义值：官方各自渲染器自行隐藏，零 DOM 侵入。旧宿主（rc.6
+ *     线）没有 `configForms` 服务 → inject 回调不触发，整段惰性，不报错。
  *  2) DOM 遮蔽 —— 设置 / 浏览器 / 插件 面板行没有官方门，按行隐藏：
  *     设置 = `[data-slot="sidebar.settings"]` 座位；浏览器/插件 = 侧栏面板行
  *     （`button[class*="panelRow"]`，按 aria-label 命中，zh/en 双语，未命中静默）。
@@ -58,8 +61,46 @@ import { config } from '../config.ts'
  * 新版。仅客户形态安装（开发调试形态保留手动刷新/热重载工作流）。
  */
 
-/** 要隐藏的面板行（aria-label 精确匹配；双语兜底）。 */
-const HIDDEN_PANEL_LABELS = new Set(['插件', 'Plugins', '浏览器', 'Browser'])
+/** 逐项遮蔽清单元数据（id 对齐 config.mask.items；守卫测试比对两者）。 */
+export const MASK_ITEM_TITLES: Record<MaskItemId, string> = {
+  devtools: '轨迹 / 本轮代码差异 / 预设切换（官方 developerTools 门）',
+  modelSeat: '模型选择座位',
+  seatSettings: '设置入口',
+  rowPlugins: '面板行「插件」',
+  rowBrowser: '面板行「浏览器」',
+  mobileNavFiles: '移动壳「文件浏览」按钮',
+  headerPresetChip: '会话头部预设 chip「标准模式」',
+  browserDesktop: '侧栏「浏览器桌面」入口',
+  menuModel: '触发候选菜单「模型」行',
+  welcomeDialog: '「内测声明」弹窗',
+  openInApp: '「用文件管理器打开」整族',
+  twinDesk: '「分身工作台」按钮',
+  terminalCard: '「新建终端」入口卡',
+  turnUsage: '本轮用量胶囊',
+}
+
+/** 需要 DOM pass（含观察器重放）的收口项；全关时整段不安装。 */
+const DOM_MASK_IDS: readonly MaskItemId[] = [
+  'seatSettings',
+  'rowPlugins',
+  'rowBrowser',
+  'mobileNavFiles',
+  'headerPresetChip',
+  'browserDesktop',
+  'menuModel',
+  'welcomeDialog',
+]
+
+/** 任一 DOM 收口项启用（总开关 + 单项；全关 = pass 无需安装）。 */
+const anyDomMaskEnabled = (): boolean => DOM_MASK_IDS.some((id) => maskEnabled(id))
+
+/** 要隐藏的面板行（aria-label 精确匹配 → 收口项 id；双语兜底）。 */
+const PANEL_ROW_ITEMS: ReadonlyMap<string, MaskItemId> = new Map([
+  ['插件', 'rowPlugins'],
+  ['Plugins', 'rowPlugins'],
+  ['浏览器', 'rowBrowser'],
+  ['Browser', 'rowBrowser'],
+])
 
 const PANEL_ROW_SELECTOR = 'button[class*="panelRow"]'
 const SETTINGS_SEAT_SELECTOR = '[data-slot="sidebar.settings"]'
@@ -67,13 +108,11 @@ const SETTINGS_SEAT_SELECTOR = '[data-slot="sidebar.settings"]'
 /** 会话头部动作槽（宿主；display:contents，内部 span = 预设 chip「标准模式」）。 */
 const HEADER_ACTIONS_SLOT_SELECTOR = '[data-slot="conversation.session.header.actions"]'
 
-/** 客户形态额外遮蔽的固定控件（选择器命中即隐藏）。 */
-const EXTRA_HIDDEN_SELECTORS = [
-  // 移动壳「文件浏览」按钮（右上角文件夹图标；data-mobile-nav 为插件自有稳定标记）
-  '[data-mobile-nav="files"]',
-  // 预设 chip 标签（见文件头 §扩展②；拼接写法避免模板字符串）
-  HEADER_ACTIONS_SLOT_SELECTOR + ' > span',
-] as const
+// 客户形态额外遮蔽的固定控件（收口项：选择器命中即隐藏）。
+// · 移动壳「文件浏览」按钮（右上角文件夹图标；data-mobile-nav 为插件自有稳定标记）
+const MOBILE_NAV_FILES_SELECTOR = '[data-mobile-nav="files"]'
+// · 预设 chip 标签（见文件头 §扩展②；拼接写法避免模板字符串）
+const PRESET_CHIP_SELECTOR = HEADER_ACTIONS_SLOT_SELECTOR + ' > span'
 
 /** 「浏览器桌面」入口按钮文案指纹（小写包含匹配；zh 为主、en 兜底）。 */
 const BROWSER_DESKTOP_HINTS = ['浏览器桌面', 'browser desktop', 'take over'] as const
@@ -115,115 +154,121 @@ export function isModelCommandRow(text: string | null | undefined): boolean {
 /**
  * 客户形态「首帧隐形」样式（模块求值即注入——早于设置壳渲染，弹窗从未被绘制过，
  * 不是「渲染后再隐藏」）。`body > div:not(#root)` 限定在门户出去的门层，防误伤 App 根。
+ * 按收口项组织：总开关/逐项任一关 → 对应规则不注入（开关关掉就没有首帧隐形的介入）。
  */
-const CUSTOMER_STEALTH_CSS = [
-  'body > div:not(#root):has([role="dialog"][aria-label="内测声明"]) { display: none !important; }',
-  'body > div:not(#root):has([role="dialog"][aria-label="Internal Testing Notice"]) { display: none !important; }',
+const CSS_RULES_BY_ITEM: Partial<Record<MaskItemId, readonly string[]>> = {
+  // 「内测声明」弹窗门层（DOM pass 之外的 :has 兜底；见文件头 §扩展④）。
+  welcomeDialog: [
+    'body > div:not(#root):has([role="dialog"][aria-label="内测声明"]) { display: none !important; }',
+    'body > div:not(#root):has([role="dialog"][aria-label="Internal Testing Notice"]) { display: none !important; }',
+  ],
   // ui-open-in-app 的整族「在本机打开」控件（标记 `data-open-target`；取值：file =
   // 预览页头/交付卡片，directory = 会话头部「用文件管理器打开」）：容器形态里没有
   // 可用的本机文件管理器，整族都是死按钮（2026-09-29 店主实机「点了也没有用」；
   // 2026-09-30 由 file 单值扩为整族）。首帧即隐形；后续新节点天然命中，无需观察器。
-  '[data-open-target] { display: none !important; }',
+  openInApp: ['[data-open-target] { display: none !important; }'],
   // 会话头部「分身工作台」按钮（dsh-matrix-agent 客户端入口；aria-label 前缀恒定，
   // 待批角标只加后缀）。客户实例上数据链路不可用，是空壳入口——2026-09-30 店主口径。
-  'button[aria-label^="分身工作台"] { display: none !important; }',
+  twinDesk: ['button[aria-label^="分身工作台"] { display: none !important; }'],
   // 右侧栏「开始」页「新建终端」入口卡（官方 ui-sidebar-terminal 引导卡标记）。
   // 客户形态只保留「工作区文件」卡——2026-09-30 店主口径。
-  '[data-sidebar-right-guide-entry="terminal"] { display: none !important; }',
+  terminalCard: ['[data-sidebar-right-guide-entry="terminal"] { display: none !important; }'],
   // 每轮动作行的「本轮用量」胶囊（官方 ui-chat TurnUsagePanel；类名 = 官方包构建哈希，
   // 与 0.1.7-rc.2 对账）：客户形态隐藏，动作行只保留 复制/点赞/点踩/分支 四颗。
-  '[class*="Q51KRG_root"] { display: none !important; }',
-].join('\n')
+  turnUsage: ['[class*="Q51KRG_root"] { display: none !important; }'],
+}
 
-if (!config.devMode && typeof document !== 'undefined') {
+/** 启用项拼出的首帧样式（空串 = 不注入任何样式；总开关关 = 全空）。 */
+function buildStealthCss(): string {
+  const rules: string[] = []
+  for (const [id, list] of Object.entries(CSS_RULES_BY_ITEM) as [MaskItemId, readonly string[]][]) {
+    if (maskEnabled(id)) rules.push(...list)
+  }
+  return rules.join('\n')
+}
+
+if (typeof document !== 'undefined') {
   const STEALTH_TAG_ID = 'dsh-web-mobile/customer-stealth'
-  if (document.querySelector('style[data-plugin-css="' + STEALTH_TAG_ID + '"]') === null) {
+  const stealthCss = buildStealthCss()
+  if (stealthCss !== '' && document.querySelector('style[data-plugin-css="' + STEALTH_TAG_ID + '"]') === null) {
     const tag = document.createElement('style')
     tag.dataset.plugin = 'dsh-web-mobile'
     tag.dataset.pluginCss = STEALTH_TAG_ID
-    tag.textContent = CUSTOMER_STEALTH_CSS
+    tag.textContent = stealthCss
     document.head.appendChild(tag)
   }
 }
 
-/** 观察器触发用：任一客户形态遮蔽目标的选择器合集。 */
+/** 观察器触发用：任一客户形态遮蔽目标的选择器合集（含未启用项——多余触发无害）。 */
 const CUSTOMER_TARGET_SELECTOR = [
   SETTINGS_SEAT_SELECTOR,
   PANEL_ROW_SELECTOR,
-  ...EXTRA_HIDDEN_SELECTORS,
+  MOBILE_NAV_FILES_SELECTOR,
+  PRESET_CHIP_SELECTOR,
   'button[aria-label*="浏览器桌面"]',
   COMMAND_OPTION_SELECTOR,
   WELCOME_DIALOG_SELECTOR,
 ].join(', ')
 
-/** 该面板行是否属于要隐藏的入口（纯函数，供单测）。 */
-export function shouldHidePanelLabel(label: string | null | undefined): boolean {
-  return typeof label === 'string' && HIDDEN_PANEL_LABELS.has(label.trim())
+/** 面板行 → 收口项 id（纯函数，供单测；非收口行返回 null）。 */
+export function panelRowMaskId(label: string | null | undefined): MaskItemId | null {
+  if (typeof label !== 'string') return null
+  return PANEL_ROW_ITEMS.get(label.trim()) ?? null
 }
 
 /**
- * 对 root 做一遍客户形态遮蔽（设置座位 + 面板行 + 文件浏览按钮 / 预设 chip /
- * 浏览器桌面入口 / 触发候选菜单「模型」行 / 内测声明弹窗）。
+ * 对 root 做一遍客户形态遮蔽（按 config.mask 逐项过滤：设置入口 + 面板行 +
+ * 文件浏览按钮 / 预设 chip / 浏览器桌面入口 / 触发候选菜单「模型」行 / 内测声明弹窗）。
  * @param root - 搜索根（挂载时全量，之后按新增子树增量）。
  * @returns 是否发生了改动。
  */
 export function applyCustomerMode(root: ParentNode): boolean {
   let changed = false
-  for (const seat of root.querySelectorAll(SETTINGS_SEAT_SELECTOR)) {
-    if (seat instanceof HTMLElement && seat.style.display !== 'none') {
-      seat.style.display = 'none'
+  const hideElement = (element: Element): void => {
+    if (element instanceof HTMLElement && element.style.display !== 'none') {
+      element.style.display = 'none'
       changed = true
     }
   }
+  const hideAll = (selector: string): void => {
+    for (const element of root.querySelectorAll(selector)) hideElement(element)
+  }
+
+  if (maskEnabled('seatSettings')) hideAll(SETTINGS_SEAT_SELECTOR)
   for (const row of root.querySelectorAll(PANEL_ROW_SELECTOR)) {
-    if (!(row instanceof HTMLElement)) continue
-    if (!shouldHidePanelLabel(row.getAttribute('aria-label'))) continue
-    if (row.style.display !== 'none') {
-      row.style.display = 'none'
-      changed = true
+    const id = panelRowMaskId(row.getAttribute('aria-label'))
+    if (id === null || !maskEnabled(id)) continue
+    hideElement(row)
+  }
+  if (maskEnabled('mobileNavFiles')) hideAll(MOBILE_NAV_FILES_SELECTOR)
+  if (maskEnabled('headerPresetChip')) hideAll(PRESET_CHIP_SELECTOR)
+  if (maskEnabled('browserDesktop')) {
+    for (const button of root.querySelectorAll('button[aria-label]')) {
+      if (!isBrowserDesktopLabel(button.getAttribute('aria-label'))) continue
+      hideElement(button)
     }
   }
-  for (const selector of EXTRA_HIDDEN_SELECTORS) {
-    for (const element of root.querySelectorAll(selector)) {
-      if (element instanceof HTMLElement && element.style.display !== 'none') {
-        element.style.display = 'none'
+  if (maskEnabled('menuModel')) {
+    for (const option of root.querySelectorAll(COMMAND_OPTION_SELECTOR)) {
+      if (!isModelCommandRow(option.textContent)) continue
+      hideElement(option)
+    }
+  }
+  if (maskEnabled('welcomeDialog')) {
+    for (const dialog of root.querySelectorAll(WELCOME_DIALOG_SELECTOR)) {
+      if (!isWelcomeNoticeLabel(dialog.getAttribute('aria-label'))) continue
+      // ① 遮父 overlay（含 backdrop mask）：首帧隐形主靠模块级 CSS；这里兜非 :has 环境。
+      const overlay = dialog.parentElement instanceof HTMLElement ? dialog.parentElement : dialog
+      hideElement(overlay)
+      // ② 摘掉应用根的 inert：未确认期间宿主把 #root 置 inert，真实触摸会被整个吞掉
+      //    （程序化 click() 不受 inert 限制——曾据此误判「无阻塞」，实际用户点不动）。
+      const appRoot = document.getElementById('root')
+      if (appRoot !== null && appRoot.hasAttribute('inert')) {
+        appRoot.removeAttribute('inert')
         changed = true
       }
+      // ③ 不代点「继续」：店主口径 = 用户看不到这个窗口即可，不触发宿主确认动作。
     }
-  }
-  for (const button of root.querySelectorAll('button[aria-label]')) {
-    if (!(button instanceof HTMLElement)) continue
-    if (!isBrowserDesktopLabel(button.getAttribute('aria-label'))) continue
-    if (button.style.display !== 'none') {
-      button.style.display = 'none'
-      changed = true
-    }
-  }
-  for (const option of root.querySelectorAll(COMMAND_OPTION_SELECTOR)) {
-    if (!(option instanceof HTMLElement)) continue
-    if (!isModelCommandRow(option.textContent)) continue
-    if (option.style.display !== 'none') {
-      option.style.display = 'none'
-      changed = true
-    }
-  }
-  for (const dialog of root.querySelectorAll(WELCOME_DIALOG_SELECTOR)) {
-    if (!(dialog instanceof HTMLElement)) continue
-    if (!isWelcomeNoticeLabel(dialog.getAttribute('aria-label'))) continue
-    // ① 遮父 overlay（含 backdrop mask）：首帧隐形主靠模块级 CSS；这里兜非 :has 环境。
-    const overlay = dialog.parentElement instanceof HTMLElement ? dialog.parentElement : dialog
-    if (overlay.style.display !== 'none') {
-      overlay.style.display = 'none'
-      changed = true
-    }
-    // ② 摘掉应用根的 inert：未确认期间宿主把 #root 置 inert，真实触摸会被整个吞掉
-    //    （程序化 click() 不受 inert 限制——曾据此误判「无阻塞」，实际用户点不动）。
-    const appRoot = document.getElementById('root')
-    if (appRoot !== null && appRoot.hasAttribute('inert')) {
-      appRoot.removeAttribute('inert')
-      changed = true
-    }
-    // ③ 不代点「继续」：店主口径 = 用户看不到这个窗口即可，不触发宿主确认动作。
   }
   return changed
 }
@@ -242,11 +287,12 @@ interface ConfigFormsFace {
  * @param ctx - client 根上下文。
  */
 export function installDeploymentMode(ctx: ClientContext): void {
-  // 1) 官方门同步：等镜像就绪（本地 RPC，很快）再对账写入，避免加载竞态下误判。
+  // 1) 官方门同步（devtools 项）：等镜像就绪（本地 RPC，很快）再对账写入，避免加载竞态下误判。
   ctx.inject(['configForms'], (scope) => {
     const face = (scope as unknown as { configForms?: ConfigFormsFace }).configForms?.developerTools
     if (face === undefined) return
-    const target = config.devMode
+    // 遮蔽生效 → 官方门关；总开关关/单项回开 → 门开（同原 devMode 双态语义）。
+    const target = !maskEnabled('devtools')
     const timer = setTimeout(() => {
       if (face.enabled.getSnapshot() === target) return
       face.setEnabled(target).catch((error: unknown) => {
@@ -256,10 +302,10 @@ export function installDeploymentMode(ctx: ClientContext): void {
     return () => clearTimeout(timer)
   })
 
-  // 2) DOM 遮蔽（仅客户形态）：设置座位 + 浏览器/插件面板行 + 文件浏览按钮 /
-  //    预设 chip / 浏览器桌面入口 / 触发候选菜单「模型」行。
+  // 2) DOM 遮蔽（仅客户形态、按 mask 逐项过滤）：设置入口 + 浏览器/插件面板行 +
+  //    文件浏览按钮 / 预设 chip / 浏览器桌面入口 / 菜单「模型」行 / 内测声明弹窗。
   ctx.effect(() => {
-    if (config.devMode) return () => {}
+    if (!anyDomMaskEnabled()) return () => {}
     applyCustomerMode(document)
     let pending = false
     const flush = (): void => {
@@ -484,7 +530,7 @@ async function fetchServerBootRev(base: string): Promise<string | null> {
  * @param ctx - client 根上下文。
  */
 export function installAutoReload(ctx: ClientContext): void {
-  if (config.devMode) return
+  if (!config.mask.master) return
   ctx.effect(() => {
     const base = document.baseURI
     if (!/^https?:/.test(base)) return () => {}

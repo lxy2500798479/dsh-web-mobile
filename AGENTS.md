@@ -23,7 +23,7 @@
   │     ├─ index.tsx         ← 浏览器半区入口（3 功能 slots + 3 品牌位 + 客户形态模型座位遮蔽）
   │     ├─ debug.ts          ← ?mobile-nav-debug=1 诊断徽章
   │     ├─ components/       ← MobileNavToggle / MobileDrawerFooter / ComposerFileButton / FileDownloadButton.tsx（下载·页头/空态）/ DeliverableDownloadButton.tsx（下载·交付卡片）/ open-files-panel.ts / ShibeiBrand.tsx（3 品牌位）/ ModelSeatHidden.tsx（模型座位遮蔽）/ AccountCard.tsx（账号行·退出登录）
-  │     ├─ config.ts         ← 部署形态开关（devMode：客户态收 轨迹/设置/浏览器/插件/模型座位；默认 false）
+  │     ├─ config.ts         ← 界面收口开关（mask.master 总开关 + mask.items 14 项逐项；默认全遮）
   │     ├─ core/             ← reconciler-core.ts（零 import）+ raf-scheduler.ts · css-rules.ts · sessions-compat.ts · layout-compat.ts · icon-compat.ts（宿主图标跨代命名兼容）
   │     ├─ effects/          ← 21 个效果模块：phone-chrome · sidebar-swipe ·
   │     │                       gesture-guard · subagent-chip-touch · composer-keyboard-guard ·
@@ -46,7 +46,7 @@
   │  └─ probes/              ← 22 个回归锚点（builtin-only，可单跑）
   ├─ tests/                  ← 35 个 .test.ts（node --test，type-stripping 直跑）
   ├─ docs/
-  │  ├─ specs/               ← 9 篇权威设计文档（入库）
+  │  ├─ specs/               ← 10 篇权威设计文档（入库）
   │  ├─ audits/ · maintenance/pitfalls.md · upstream/（runbook + compat-contracts.json + host-jank-feedback.md）· fork-wzxmt-zhc/
   │  └─ debug/ · superpowers/ ← 本地不入库（例外：composer-tree-recon.md 与 settings-market-debug-map.md 已于 2026-09-25 入库）
   ├─ .github/workflows/ci.yml ← verify → test:core → build → git diff --exit-code lib

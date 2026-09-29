@@ -117,6 +117,10 @@ link）。挂载全量一遍 + 观察 `<head>` 子树新增（宿主整块重挂
 
 ## 部署形态开关（`config.ts` 的 `devMode`，2026-09-28 续改）
 
+> 2026-09-29 开关化：`devMode` 退役，语义并入 `config.mask.master`（+ 逐项 `mask.items`
+> 14 项，每项一配置）——见 `docs/specs/2026-09-29-customer-mask-config-design.md`；
+> 本节表格为 2026-09-28 历史形态，保留作沿革记录。
+
 面向客户的生产形态把「开发/高级入口」全收起来，开发调试时开回来。一个开关、一处配置：
 
 | devMode | 行为 |

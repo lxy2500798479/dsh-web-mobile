@@ -1,21 +1,64 @@
 /**
- * 部署形态开关（编译期常量）。
+ * 界面收口开关（编译期常量）——总开关 + 每项一配置，本项目唯一开关面。
  *
- * 改这里 → `pnpm build` → 本地重载 / 实例重打镜像即生效。默认 = 客户生产形态。
+ * 改这里 → `pnpm build` → 本地重载 / 实例重打镜像即生效。默认 = 客户生产形态（全遮）。
  *
- * devMode:
- *  - `false`（默认，客户生产形态）：隐藏 轨迹 / 本轮代码差异 / 预设切换（走宿主官方
- *    `ui-settings.developerTools` 门，本插件启动时按此开关同步它）+ 设置 / 浏览器 / 插件
- *    面板行（DOM 遮蔽）+ 模型选择座位（slot 遮蔽）。普通业务用户只看到聊天本体。
- *  - `true`（开发调试形态）：以上入口全部恢复显示（含官方门打开）。
+ * mask.master（总开关）:
+ *  - `true`（默认，客户形态）：按 mask.items 逐项遮蔽下列入口；
+ *  - `false`（开发/管理形态）：全部恢复官方原貌（= 原 devMode: true 的语义，含官方门打开）。
  *
- * 设计取舍：宿主 0.1.7 线自带 `ui-settings.developerTools`（默认 **开**，官方原文
- * "New installations and missing values enable the full interface"）——轨迹/代码差异/
- * 预设切换三种入口都由它门控，所以这里不重复造轮子，只把它同步成我们的开关值；
- * 官方没有门的（设置/浏览器/插件/模型座位）才由本插件自己遮蔽。一个开关、一处配置，
- * 不至于散落乱改。
+ * mask.items（逐项开关；语义：true = 遮蔽该处，false = 该处恢复显示）:
+ *  - devtools         轨迹 / 本轮代码差异 / 预设切换（宿主官方 ui-settings.developerTools 门同步）
+ *  - modelSeat        模型选择座位（入口 slot 遮蔽）
+ *  - seatSettings     设置入口（[data-slot="sidebar.settings"]）
+ *  - rowPlugins       面板行「插件」
+ *  - rowBrowser       面板行「浏览器」
+ *  - mobileNavFiles   移动壳「文件浏览」按钮
+ *  - headerPresetChip 会话头部预设 chip「标准模式」
+ *  - browserDesktop   侧栏「浏览器桌面」入口（文案指纹）
+ *  - menuModel        触发候选菜单（+ / 斜杠）「模型」行（文案指纹）
+ *  - welcomeDialog    「内测声明」弹窗（CSS 首帧 + 摘 inert）
+ *  - openInApp        「用文件管理器打开」整族（[data-open-target]）
+ *  - twinDesk         「分身工作台」按钮
+ *  - terminalCard     「新建终端」入口卡
+ *  - turnUsage        每轮动作行「本轮用量」胶囊
+ *
+ * 设计取舍（2026-09-29 开关化，店主口径「开关是代码层面的，不是配置到界面」）：
+ * 一个总开关 + 每项一个配置；引擎（effects/deployment-mode.ts、index.tsx 座位注册）
+ * 按本配置过滤执行——回开某项改一行即可，不再翻多个文件改代码。
+ * 守卫：tests/brand-rebrand.test.ts 对账 mask.items ↔ 引擎清单（MASK_ITEM_TITLES），
+ * 并锁定默认全遮（行为零变化）。id 增删或语义变更时两处一起改。
+ *
+ * 回开示例：`mobileNavFiles: false` → build → 发版滚动 ⇒ 手机端「文件浏览」按钮回来。
  */
 export const config = {
-  /** 开发调试形态：true = 显示全部开发/高级入口。 */
-  devMode: false,
+  mask: {
+    /** 总开关：true = 客户形态（按 items 遮蔽）；false = 全部恢复官方原貌。 */
+    master: true,
+    /** 逐项遮蔽开关：true = 遮蔽；false = 该处恢复显示。 */
+    items: {
+      devtools: true,
+      modelSeat: true,
+      seatSettings: true,
+      rowPlugins: true,
+      rowBrowser: true,
+      mobileNavFiles: true,
+      headerPresetChip: true,
+      browserDesktop: true,
+      menuModel: true,
+      welcomeDialog: true,
+      openInApp: true,
+      twinDesk: true,
+      terminalCard: true,
+      turnUsage: true,
+    },
+  },
 } as const
+
+/** 界面收口项 id（= mask.items 的键；引擎清单 MASK_ITEM_TITLES 必须与之逐项对齐）。 */
+export type MaskItemId = keyof typeof config.mask.items
+
+/** 该项的遮蔽当前是否生效（总开关 + 逐项都开才算）。 */
+export function maskEnabled(id: MaskItemId): boolean {
+  return config.mask.master && config.mask.items[id]
+}

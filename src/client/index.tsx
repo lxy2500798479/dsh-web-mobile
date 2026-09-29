@@ -24,7 +24,7 @@ import { installAionuiCompat } from './effects/aionui-compat.ts'
 import { installBrandHeadline } from './effects/brand-headline.ts'
 import { installBrandFavicon, installBrandTitle } from './effects/brand-title.ts'
 import { installAutoReload, installDeploymentMode } from './effects/deployment-mode.ts'
-import { config } from './config.ts'
+import { maskEnabled } from './config.ts'
 import { createPanelExit, installPanelRowExit } from './effects/panel-exit.ts'
 import { createRafScheduler } from './core/raf-scheduler.ts'
 import { installDebugBadge } from './debug.ts'
@@ -266,7 +266,7 @@ export function apply(ctx: ClientContext): void {
   // SVG link，不入 slot 系统；机制与边界见文件头）。
   installBrandFavicon(ctx)
 
-  // 部署形态（config.ts 的 devMode）：客户态收 轨迹/设置/浏览器/插件/模型座位 等入口，
+  // 部署形态（config.ts 的 mask 开关：总开关 + 逐项）：客户态收 轨迹/设置/浏览器/插件/模型座位 等入口，
   // 开发态全开。（轨迹/代码差异/预设切换走宿主官方 developerTools 门，见文件头。）
   installDeploymentMode(ctx)
 
@@ -409,9 +409,9 @@ export function apply(ctx: ClientContext): void {
   // ---- 单模型固定：前端不提供模型选择（2026-09-28）----
   // 部署只有一个内置模型 → 遮蔽模型座位（宿主 single 槽，model-selection 插件
   // 注册在优先级 0；这里 -1 覆盖并渲染空）。机制与品牌位一致：官方 slot 组合路径，
-  // 零宿主改动；旧宿主无此槽声明时静默惰性。仅在客户形态（config.devMode=false）
-  // 下注册：开发态恢复显示，便于切换模型调试。
-  if (!config.devMode) {
+  // 零宿主改动；旧宿主无此槽声明时静默惰性。仅当收口项 modelSeat 生效（总开关 +
+  // 单项）时注册：回开（config 改 false）即恢复显示，便于切换模型调试。
+  if (maskEnabled('modelSeat')) {
     ctx.slots.inject('conversation.input.model', () => ctx.slots.register({
       name: 'conversation.input.model',
       priority: -1,

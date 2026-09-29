@@ -24,6 +24,7 @@ import {
 } from '../src/client/core/brand.ts'
 import {
   AUTO_RELOAD_MAX_PER_TARGET,
+  MASK_ITEM_TITLES,
   autoReloadAllowed,
   autoReloadNextState,
   bootRevInHtml,
@@ -31,8 +32,9 @@ import {
   isBrowserDesktopLabel,
   isModelCommandRow,
   isWelcomeNoticeLabel,
-  shouldHidePanelLabel,
+  panelRowMaskId,
 } from '../src/client/effects/deployment-mode.ts'
+import { config, maskEnabled } from '../src/client/config.ts'
 import {
   accountLocalpart,
   avatarInitial,
@@ -129,11 +131,11 @@ test('浏览器桌面文案指纹：命中 zh/en，普通按钮不误伤（客�
   assert.equal(isBrowserDesktopLabel(undefined), false)
 })
 
-test('面板行隐藏判据保持既有契约（文件浏览不误伤）', () => {
-  assert.equal(shouldHidePanelLabel('插件'), true)
-  assert.equal(shouldHidePanelLabel('Browser'), true)
-  assert.equal(shouldHidePanelLabel('文件浏览'), false)
-  assert.equal(shouldHidePanelLabel(null), false)
+test('面板行收口判据保持既有契约（文件浏览不误伤）', () => {
+  assert.equal(panelRowMaskId('插件'), 'rowPlugins')
+  assert.equal(panelRowMaskId('Browser'), 'rowBrowser')
+  assert.equal(panelRowMaskId('文件浏览'), null)
+  assert.equal(panelRowMaskId(null), null)
 })
 
 test('deployment-mode 含三个客户形态额外遮蔽目标（源码级守卫）', async () => {
@@ -146,7 +148,7 @@ test('deployment-mode 含三个客户形态额外遮蔽目标（源码级守卫�
   assert.ok(source.includes("'浏览器桌面'"), 'missing browser-desktop fingerprint')
   assert.ok(source.includes('isWelcomeNoticeLabel'), 'missing welcome-notice hide')
   assert.ok(source.includes("removeAttribute('inert')"), 'missing inert release')
-  assert.ok(source.includes('CUSTOMER_STEALTH_CSS'), 'missing stealth CSS')
+  assert.ok(source.includes('CSS_RULES_BY_ITEM'), 'missing stealth CSS')
   assert.ok(source.includes(':has([role="dialog"]'), 'missing :has overlay selector')
   assert.ok(!source.includes('button.click()'), 'must NOT auto-click the welcome continue')
 })
@@ -179,6 +181,26 @@ test('菜单「模型」行指纹：命中 zh/en 描述，其它命令行不误�
   assert.equal(isModelCommandRow(''), false)
   assert.equal(isModelCommandRow(null), false)
   assert.equal(isModelCommandRow(undefined), false)
+})
+
+test('界面收口开关：总开关 + 每项一配置，默认全遮（行为零变化）', () => {
+  assert.equal(config.mask.master, true, '总开关默认必须为客户形态（按 items 遮蔽）')
+  const ids = Object.keys(config.mask.items).sort()
+  assert.deepEqual(
+    ids,
+    Object.keys(MASK_ITEM_TITLES).sort(),
+    'config.mask.items 与引擎清单（MASK_ITEM_TITLES）必须逐项对齐',
+  )
+  assert.equal(ids.length, 14, '收口项共 14 项（含最新两项：菜单「模型」行 / 本轮用量胶囊）')
+  for (const id of ids) {
+    assert.equal(
+      (config.mask.items as Record<string, boolean>)[id],
+      true,
+      `默认必须保持遮蔽（行为零变化）：${id}`,
+    )
+  }
+  assert.equal(maskEnabled('turnUsage'), true)
+  assert.equal(maskEnabled('menuModel'), true)
 })
 
 test('内测声明弹窗指纹：命中 zh/en，普通对话框不误伤', async () => {
@@ -315,7 +337,7 @@ test('页面版本跟随已接进客户线入口，且仅客户形态安装（�
   const at = source.indexOf('export function installAutoReload')
   assert.notEqual(at, -1, 'missing installAutoReload export')
   const section = source.slice(at, at + 300)
-  assert.ok(section.includes('if (config.devMode) return'), 'auto reload must install in customer form only')
+  assert.ok(section.includes('if (!config.mask.master) return'), 'auto reload must install in customer form only')
 })
 
 test('改密弹窗（2026-09-29 晚）：菜单项 / 居中弹窗标记 / 门户端点 / 表单校验（源码级守卫）', async () => {
