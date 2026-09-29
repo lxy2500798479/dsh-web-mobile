@@ -149,6 +149,19 @@ test('deployment-mode 含三个客户形态额外遮蔽目标（源码级守卫�
   assert.ok(!source.includes('button.click()'), 'must NOT auto-click the welcome continue')
 })
 
+test('客户形态再遮蔽三处：分身工作台 / 新建终端卡 / 文件管理器打开（源码级守卫）', async () => {
+  const source = await readFile(join(root, 'src/client/effects/deployment-mode.ts'), 'utf8')
+  assert.ok(source.includes('button[aria-label^="分身工作台"]'), 'missing twin-desk button hide')
+  assert.ok(
+    source.includes('[data-sidebar-right-guide-entry="terminal"]'),
+    'missing terminal guide-card hide',
+  )
+  assert.ok(
+    source.includes('[data-open-target] { display: none !important; }'),
+    'missing open-in-app family hide',
+  )
+})
+
 test('内测声明弹窗指纹：命中 zh/en，普通对话框不误伤', async () => {
   assert.equal(isWelcomeNoticeLabel('内测声明'), true)
   assert.equal(isWelcomeNoticeLabel(' Internal Testing Notice '), true)

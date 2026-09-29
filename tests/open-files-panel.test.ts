@@ -252,7 +252,8 @@ test('the card control reads the absolute path off the card and never guesses', 
 
 test('the card control is registered into the reserved slot and the host control is shadowed', () => {
   assert.ok(readSource('src/client/index.tsx').includes("ctx.slots.inject('deliverables.file.actions'"))
-  // 宿主的 open-in-app 控件（预览页头 + 交付卡片共用标记）在客户形态被 CSS 遮蔽。
+  // 宿主的 open-in-app 整族控件（file = 预览页头/交付卡片、directory = 会话头部）
+  // 在客户形态被 CSS 遮蔽。
   const mode = readSource('src/client/effects/deployment-mode.ts')
-  assert.ok(mode.includes('[data-open-target="file"] { display: none !important; }'))
+  assert.ok(mode.includes('[data-open-target] { display: none !important; }'))
 })
