@@ -5,6 +5,8 @@
 // 文件浏览按钮 / 预设 chip 选择器；新测试文件受 AGENTS.md 文件数契约约束，故并入）。
 // 2026-09-29 再追加：账号行/退出登录守卫（account-card 纯函数 + 注册与
 // 「刻意跨宽度」源码级守卫；同样并入）。
+// 2026-09-30 再追加：页面版本跟随（auto-reload）防回归——rev 抽取纯函数、记账上限
+// 判据与源码级约束（no-store / 可见性门 / 输入中推迟 / 刷新落在记账门之后；并入）。
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
@@ -21,6 +23,11 @@ import {
   isHostPreviewBadgeText,
 } from '../src/client/core/brand.ts'
 import {
+  AUTO_RELOAD_MAX_PER_TARGET,
+  autoReloadAllowed,
+  autoReloadNextState,
+  bootRevInHtml,
+  bootRevOf,
   isBrowserDesktopLabel,
   isWelcomeNoticeLabel,
   shouldHidePanelLabel,
@@ -142,7 +149,7 @@ test('deployment-mode 含三个客户形态额外遮蔽目标（源码级守卫�
   assert.ok(!source.includes('button.click()'), 'must NOT auto-click the welcome continue')
 })
 
-test('内测声明弹窗指纹：命中 zh/en，普通对话框不误伤', () => {
+test('内测声明弹窗指纹：命中 zh/en，普通对话框不误伤', async () => {
   assert.equal(isWelcomeNoticeLabel('内测声明'), true)
   assert.equal(isWelcomeNoticeLabel(' Internal Testing Notice '), true)
   assert.equal(isWelcomeNoticeLabel('设置'), false)
@@ -203,4 +210,78 @@ test('账号行注册与「刻意跨宽度」：桌面退出入口是 2026-09-29
     !hide.includes('data-mobile-nav="account'),
     'account row must NOT be hidden on desktop (customer logout entry)',
   )
+})
+
+// —— 页面版本跟随（自动刷新，客户线；2026-09-30 并入）——
+test('启动图 rev 抽取：只认对象形状的非空字符串 rev', () => {
+  assert.equal(bootRevOf({ rev: 'abc123456789' }), 'abc123456789')
+  assert.equal(bootRevOf({ rev: 12 }), null)
+  assert.equal(bootRevOf({ rev: '' }), null)
+  assert.equal(bootRevOf({}), null)
+  assert.equal(bootRevOf(null), null)
+  assert.equal(bootRevOf('rev'), null)
+  assert.equal(bootRevOf(undefined), null)
+})
+
+test('从 index HTML 抽 rev：取顶层 rev、容忍 \\u003c 转义与后续脚本', () => {
+  const html = [
+    '<!doctype html><html><head>',
+    '<script>globalThis["__DSH_BOOT__"] = {"rev":"top000000000","entries":[{"id":"dsh-web-mobile","rev":"nested000001","url":"plugins/dsh-web-mobile/client.js?rev=nested000001"}],"batches":[{"phase":"bootstrap","url":"plugins/…","rev":"bat000000001"}]}</script>',
+    '<script>var tail = 1</script>',
+    '</head></html>',
+  ].join('')
+  assert.equal(bootRevInHtml(html), 'top000000000')
+  // 宿主对 JSON 值里的 `<` 做 \u003c 转义——JSON.parse 还原为 `<`，不影响抽取
+  assert.equal(
+    bootRevInHtml('globalThis["__DSH_BOOT__"] = {"rev":"a\\u003cb"}</script>'),
+    'a<b',
+  )
+  // 登录页 / 旧宿主 / 中间层改写 / 无闭合脚本：一律抽不到 → null（调用方静默跳过）
+  assert.equal(bootRevInHtml('<html><body>login</body></html>'), null)
+  assert.equal(bootRevInHtml('globalThis["__DSH_BOOT__"] = {broken</script>'), null)
+  assert.equal(bootRevInHtml('globalThis["__DSH_BOOT__"] = {"rev":"x"}'), null)
+})
+
+test('自动刷新记账：同目标封顶、换目标重新起算（防刷新循环）', () => {
+  assert.equal(autoReloadAllowed('v2', null), true)
+  assert.equal(autoReloadAllowed('v2', { target: 'v2', attempts: 1 }), true)
+  assert.equal(autoReloadAllowed('v2', { target: 'v2', attempts: AUTO_RELOAD_MAX_PER_TARGET }), false)
+  assert.equal(autoReloadAllowed('v3', { target: 'v2', attempts: AUTO_RELOAD_MAX_PER_TARGET }), true)
+  assert.deepEqual(autoReloadNextState('v2', null), { target: 'v2', attempts: 1 })
+  assert.deepEqual(autoReloadNextState('v2', { target: 'v2', attempts: 1 }), { target: 'v2', attempts: 2 })
+  assert.deepEqual(autoReloadNextState('v3', { target: 'v2', attempts: 2 }), { target: 'v3', attempts: 1 })
+})
+
+test('页面版本跟随：no-store 取根 + 可见性门 + 输入中推迟 + 刷新在记账门之后（源码级守卫）', async () => {
+  const source = await readFile(join(root, 'src/client/effects/deployment-mode.ts'), 'utf8')
+  // 取件必须绕缓存——否则读到的可能正是要避免的旧 HTML
+  assert.ok(source.includes("cache: 'no-store'"), 'missing no-store fetch')
+  // 隐藏期间不发检查；回前台由 visibilitychange / pageshow 补
+  assert.ok(source.includes("document.visibilityState !== 'visible'"), 'missing visibility gate')
+  assert.ok(source.includes("addEventListener('visibilitychange', onVisibility)"), 'missing visibilitychange wiring')
+  assert.ok(source.includes("addEventListener('pageshow', onPageShow)"), 'missing pageshow wiring')
+  // 正在输入不打断（焦点在输入控件 → 推迟重试）
+  assert.ok(source.includes('isEditableFocused(document)'), 'missing editable-focus deferral')
+  // 武装标记：探针靠它区分「装上了」与「静默惰性」
+  assert.ok(source.includes("setAttribute('data-mobile-nav-auto-reload', 'armed')"), 'missing armed marker')
+  assert.ok(source.includes("removeAttribute('data-mobile-nav-auto-reload')"), 'missing marker disposal')
+  // 刷新必须落在记账门之后：先判 autoReloadAllowed、再写新状态、最后 reload
+  // （reload 用 lastIndexOf：文件头分节注释里也提到同一个词）
+  const allowed = source.indexOf('if (!autoReloadAllowed(fresh, state)) return')
+  const write = source.indexOf('writeAutoReloadState(next)')
+  const reload = source.lastIndexOf('location.reload()')
+  assert.notEqual(allowed, -1, 'missing autoReloadAllowed gate')
+  assert.notEqual(write, -1, 'missing writeAutoReloadState call')
+  assert.notEqual(reload, -1, 'missing location.reload()')
+  assert.ok(allowed < write && write < reload, 'reload must sit behind the attempt-cap gate')
+})
+
+test('页面版本跟随已接进客户线入口，且仅客户形态安装（源码级守卫）', async () => {
+  const index = await readFile(join(root, 'src/client/index.tsx'), 'utf8')
+  assert.ok(index.includes('installAutoReload(ctx)'), 'missing installAutoReload(ctx) wiring')
+  const source = await readFile(join(root, 'src/client/effects/deployment-mode.ts'), 'utf8')
+  const at = source.indexOf('export function installAutoReload')
+  assert.notEqual(at, -1, 'missing installAutoReload export')
+  const section = source.slice(at, at + 300)
+  assert.ok(section.includes('if (config.devMode) return'), 'auto reload must install in customer form only')
 })

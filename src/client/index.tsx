@@ -23,7 +23,7 @@ import { installShortcutModalKeyboardGuard } from './effects/shortcut-modal-keyb
 import { installAionuiCompat } from './effects/aionui-compat.ts'
 import { installBrandHeadline } from './effects/brand-headline.ts'
 import { installBrandFavicon, installBrandTitle } from './effects/brand-title.ts'
-import { installDeploymentMode } from './effects/deployment-mode.ts'
+import { installAutoReload, installDeploymentMode } from './effects/deployment-mode.ts'
 import { config } from './config.ts'
 import { createPanelExit, installPanelRowExit } from './effects/panel-exit.ts'
 import { createRafScheduler } from './core/raf-scheduler.ts'
@@ -269,6 +269,12 @@ export function apply(ctx: ClientContext): void {
   // 部署形态（config.ts 的 devMode）：客户态收 轨迹/设置/浏览器/插件/模型座位 等入口，
   // 开发态全开。（轨迹/代码差异/预设切换走宿主官方 developerTools 门，见文件头。）
   installDeploymentMode(ctx)
+
+  // 页面版本跟随（客户形态）：服务端启动图 rev 变化（发版/滚实例）时自动刷新一次取
+  // 新版。装到主屏幕的客户长期不刷新，旧页面与服务端新代码混用会出怪状（消息不出
+  // 回复等）；机制与保守约束（可见性/输入中推迟/刷新上限）见 deployment-mode.ts
+  // 文件尾同名分节。
+  installAutoReload(ctx)
 
   // Debug badge (?mobile-nav-debug=1): live state overlay for phone-side
   // repros. No-op without the query param (docs: README, AGENTS.md).

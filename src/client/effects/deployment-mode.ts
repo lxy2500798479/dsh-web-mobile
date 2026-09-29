@@ -33,6 +33,13 @@ import { config } from '../config.ts'
  *     点它没有任何结果——2026-09-29 店主实机「点了也没有用」）。CSS 首帧遮蔽；
  *     交付卡片的下载位由本插件 DeliverableDownloadButton 补上。
  * 三者只在手机壳 / 会话 active 期渲染，桌面视口天然不命中（死规则）。
+ *
+ * 2026-09-30 扩展（客户线）：**页面版本跟随（自动刷新）** —— 见文件尾同名分节。
+ * 宿主把「全部插件 bundle 的内容修订」内联成 `window.__DSH_BOOT__` 的 rev 进
+ * index HTML；客户把站点装到主屏幕后长期不刷新页面，发版（插件/镜像）后旧页面与
+ * 服务端新代码混用会出怪状（消息不出回复等）。本机制周期性 no-store 取回文档根、
+ * 抽同一 rev 与本地页面比对，不同即自动 `location.reload()` 一次，把旧页面收敛到
+ * 新版。仅客户形态安装（开发调试形态保留手动刷新/热重载工作流）。
  */
 
 /** 要隐藏的面板行（aria-label 精确匹配；双语兜底）。 */
@@ -262,4 +269,246 @@ export function installDeploymentMode(ctx: ClientContext): void {
       observer.disconnect()
     }
   }, 'dsh-web-mobile: customer mode')
+}
+
+// ═══════════════ 客户形态 · 页面版本跟随（自动刷新，2026-09-30）═══════════════
+//
+// 背景（店主）：客户把站点装到主屏幕（PWA）后长期不刷新页面；发版（插件/镜像）后
+// 旧页面与服务端新代码混用会出各种怪状（消息不出回复等），而 PWA 的「恢复」语义
+// （切出去再回来不重新导航）让一个旧页面可以存活数天。本效果 = 周期性对比「本地
+// 页面启动时的版本」与「服务端当前版本」，不一致就自动刷新一次取新版。
+//
+// 版本指纹选 `window.__DSH_BOOT__` 的 `rev`（宿主 client-modules 的启动图哈希：
+// 对每个插件 bundle 的内容修订取 sha1，同时随镜像重建而变化）。两端对称：
+//   · 本地 = 运行时全局 `__DSH_BOOT__`（宿主在 index HTML 内联、boot 时读取）；
+//   · 服务端 = no-store fetch 文档根（`<base href="./">` 解析出的 app 根），从返回
+//     HTML 文本里再抽同一个内联全局（`globalThis["__DSH_BOOT__"] = {…}`）。
+// 选 rev 而不是 DOM 清单：JSON 形态、两端同源、不受懒加载往 DOM 追加 preload/script
+// 的干扰。两个字符串不同 ⇒ 服务端代码集已变 ⇒ `location.reload()`。
+//
+// 保守约束（防误刷 / 防刷新循环）：
+//   · 只在页面可见时轮询（60s）；回到前台（visibilitychange / pageshow）、网络恢复
+//     （online）时补查，两次检查最小间隔 15s；
+//   · 焦点在输入类控件（正在打字）时不刷、20s 后重试（草稿本身跨刷新持久——宿主
+//     contract：composer draft "survives session switches and reloads"；这里只是
+//     不打断正在进行的输入动作）；
+//   · 同一目标版本最多自动刷 2 次（sessionStorage 记账，跨刷新保留）：刷完仍旧版
+//     （缓存异常/服务端回滚竞态）就放弃该目标，不再循环；
+//   · 任一侧拿不到 rev（旧宿主、登录页、网络失败、非 http(s)）一律静默跳过。
+// 边界：登录页与营销页由门户渲染、没有该全局 → 天然不参与；本效果随插件走
+// （门户 / NodePort / DSHA 壳里的页面均生效，与视口无关）。
+
+/** 检查间隔（页面可见时轮询）；隐藏期间不发请求。 */
+const AUTO_RELOAD_INTERVAL_MS = 60_000
+/** 两次检查的最小间隔（事件触发的补查沿用）。 */
+const AUTO_RELOAD_MIN_GAP_MS = 15_000
+/** 页面加载后首次检查的延迟（避开启动期）。 */
+const AUTO_RELOAD_FIRST_DELAY_MS = 15_000
+/** 因「正在输入」推迟后的重试延迟。 */
+const AUTO_RELOAD_DEFER_RETRY_MS = 20_000
+/** 单次检查的取件超时。 */
+const AUTO_RELOAD_FETCH_TIMEOUT_MS = 10_000
+/** 同一目标版本最多自动刷新的次数（防刷新循环）。 */
+export const AUTO_RELOAD_MAX_PER_TARGET = 2
+/** 记账键（sessionStorage：跨刷新保留、随标签页生灭）。 */
+export const AUTO_RELOAD_STORAGE_KEY = 'dsh-web-mobile:auto-reload'
+
+/** 自动刷新记账：目标版本（服务端启动图 rev）与已尝试的刷新次数。 */
+export interface AutoReloadState {
+  target: string
+  attempts: number
+}
+
+/**
+ * 读一个 `__DSH_BOOT__` 候选值的启动图 rev。形态不符（旧宿主/异常页）返回 null。
+ * @param value - 任意 `__DSH_BOOT__` 候选值。
+ * @returns rev 字符串，或 null。
+ */
+export function bootRevOf(value: unknown): string | null {
+  if (typeof value !== 'object' || value === null) return null
+  const rev = (value as { rev?: unknown }).rev
+  return typeof rev === 'string' && rev !== '' ? rev : null
+}
+
+/**
+ * 从宿主渲染的 index HTML 文本里抽启动图 rev（内联行
+ * `globalThis["__DSH_BOOT__"] = {…}`；宿主对 JSON 值做过 `\u003c` 转义，不含裸
+ * `</script`）。抽不到（旧宿主格式/登录页/中间层改写）返回 null，调用方静默跳过。
+ * @param html - index 响应文本。
+ * @returns rev 字符串，或 null。
+ */
+export function bootRevInHtml(html: string): string | null {
+  const match = /globalThis\["__DSH_BOOT__"\]\s*=\s*([\s\S]+?)\s*<\/script>/.exec(html)
+  if (match === null) return null
+  try {
+    return bootRevOf(JSON.parse(match[1] ?? '') as unknown)
+  } catch {
+    // 非法 JSON（页面被中间层改写等）→ 当抽不到，静默跳过
+    return null
+  }
+}
+
+/**
+ * 该目标版本是否还允许自动刷新（同目标已刷满上限则放弃）。
+ * @param fresh - 服务端当前 rev。
+ * @param state - 记账状态（无则允许）。
+ * @returns 是否允许刷新。
+ */
+export function autoReloadAllowed(fresh: string, state: AutoReloadState | null): boolean {
+  if (state === null) return true
+  return !(state.target === fresh && state.attempts >= AUTO_RELOAD_MAX_PER_TARGET)
+}
+
+/**
+ * 记一次「即将发生」的刷新：换目标从 1 起算，同目标累加。
+ * @param fresh - 服务端当前 rev。
+ * @param state - 记账状态（无则新建）。
+ * @returns 新记账状态。
+ */
+export function autoReloadNextState(fresh: string, state: AutoReloadState | null): AutoReloadState {
+  const attempts = state !== null && state.target === fresh ? state.attempts + 1 : 1
+  return { target: fresh, attempts }
+}
+
+/** 焦点是否在输入类控件上（正在打字，刷新应推迟而不是打断）。 */
+export function isEditableFocused(doc: Document): boolean {
+  const active = doc.activeElement
+  if (active === null) return false
+  const tag = active.tagName
+  if (tag === 'TEXTAREA' || tag === 'INPUT' || tag === 'SELECT') return true
+  return active instanceof HTMLElement && active.isContentEditable
+}
+
+/** 读记账（无/坏值都当空；sessionStorage 在隐私模式下也可能不可用）。 */
+function readAutoReloadState(): AutoReloadState | null {
+  let raw: string | null
+  try {
+    raw = sessionStorage.getItem(AUTO_RELOAD_STORAGE_KEY)
+  } catch {
+    // sessionStorage 不可用（隐私模式等）→ 视作无记账
+    return null
+  }
+  if (raw === null) return null
+  try {
+    const parsed: unknown = JSON.parse(raw)
+    if (typeof parsed !== 'object' || parsed === null) return null
+    const { target, attempts } = parsed as { target?: unknown; attempts?: unknown }
+    if (typeof target !== 'string' || typeof attempts !== 'number' || !Number.isFinite(attempts)) return null
+    return { target, attempts }
+  } catch {
+    // 坏 JSON（外部改写）→ 视作无记账
+    return null
+  }
+}
+
+/** 写记账（写失败不阻断刷新本身）。 */
+function writeAutoReloadState(state: AutoReloadState): void {
+  try {
+    sessionStorage.setItem(AUTO_RELOAD_STORAGE_KEY, JSON.stringify(state))
+  } catch {
+    // sessionStorage 写失败（隐私模式/配额）→ 放弃记账
+  }
+}
+
+/** no-store 取文档根并抽服务端 rev；任何失败静默返回 null。 */
+async function fetchServerBootRev(base: string): Promise<string | null> {
+  const controller = new AbortController()
+  const timer = setTimeout(() => { controller.abort() }, AUTO_RELOAD_FETCH_TIMEOUT_MS)
+  try {
+    const response = await fetch(base, {
+      cache: 'no-store',
+      credentials: 'same-origin',
+      signal: controller.signal,
+      headers: { accept: 'text/html' },
+    })
+    if (!response.ok) return null
+    return bootRevInHtml(await response.text())
+  } catch {
+    // 网络失败/超时 → 静默跳过，下一轮再试
+    return null
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+/**
+ * 安装页面版本跟随（自动刷新；全视口生效——桌面标签页同样会挂着旧版本）。
+ * @param ctx - client 根上下文。
+ */
+export function installAutoReload(ctx: ClientContext): void {
+  if (config.devMode) return
+  ctx.effect(() => {
+    const base = document.baseURI
+    if (!/^https?:/.test(base)) return () => {}
+    if (bootRevOf((globalThis as { __DSH_BOOT__?: unknown }).__DSH_BOOT__) === null) return () => {}
+    let lastCheckAt = 0
+    let inFlight = false
+    let disposed = false
+    let deferTimer: ReturnType<typeof setTimeout> | undefined
+    // 武装标记（诊断/探针用：确认效果真的装上了——「静默惰性」的分支很难从外部区分）。
+    document.documentElement.setAttribute('data-mobile-nav-auto-reload', 'armed')
+
+    async function check(): Promise<void> {
+      if (disposed || inFlight) return
+      if (document.visibilityState !== 'visible') return
+      const now = Date.now()
+      if (now - lastCheckAt < AUTO_RELOAD_MIN_GAP_MS) return
+      lastCheckAt = now
+      if (navigator.onLine === false) return
+      if (isEditableFocused(document)) {
+        // 正在打字：不打断，稍后重试（草稿跨刷新持久，这里只是不抢输入动作）。
+        scheduleDeferred()
+        return
+      }
+      inFlight = true
+      let fresh: string | null = null
+      try {
+        fresh = await fetchServerBootRev(base)
+      } finally {
+        inFlight = false
+      }
+      if (disposed || fresh === null) return
+      const liveRev = bootRevOf((globalThis as { __DSH_BOOT__?: unknown }).__DSH_BOOT__)
+      if (liveRev === null || fresh === liveRev) return
+      const state = readAutoReloadState()
+      if (!autoReloadAllowed(fresh, state)) return
+      const next = autoReloadNextState(fresh, state)
+      writeAutoReloadState(next)
+      console.info('[dsh-web-mobile] 服务端版本已更新，自动刷新页面', {
+        from: liveRev,
+        to: fresh,
+        attempt: next.attempts,
+      })
+      location.reload()
+    }
+
+    const scheduleDeferred = (): void => {
+      if (disposed || deferTimer !== undefined) return
+      deferTimer = setTimeout(() => {
+        deferTimer = undefined
+        void check()
+      }, AUTO_RELOAD_DEFER_RETRY_MS)
+    }
+
+    const interval = setInterval(() => { void check() }, AUTO_RELOAD_INTERVAL_MS)
+    const firstCheck = setTimeout(() => { void check() }, AUTO_RELOAD_FIRST_DELAY_MS)
+    const onVisibility = (): void => {
+      if (document.visibilityState === 'visible') void check()
+    }
+    const onPageShow = (): void => { void check() }
+    const onOnline = (): void => { void check() }
+    document.addEventListener('visibilitychange', onVisibility)
+    window.addEventListener('pageshow', onPageShow)
+    window.addEventListener('online', onOnline)
+    return () => {
+      disposed = true
+      clearInterval(interval)
+      clearTimeout(firstCheck)
+      if (deferTimer !== undefined) clearTimeout(deferTimer)
+      document.removeEventListener('visibilitychange', onVisibility)
+      window.removeEventListener('pageshow', onPageShow)
+      window.removeEventListener('online', onOnline)
+      document.documentElement.removeAttribute('data-mobile-nav-auto-reload')
+    }
+  }, 'dsh-web-mobile: auto reload')
 }
