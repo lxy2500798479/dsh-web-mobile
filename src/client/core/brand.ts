@@ -10,9 +10,9 @@
 //   dsh-client-locale 的 register 对同命名空间同 locale 重复注册会直接抛错），
 //   只能做 DOM 替换，见 effects/brand-headline.ts。
 
-/** 中贝通信品牌图形（maas-test 静态资源，文件名带内容哈希）。 */
+/** 中贝通信品牌图形（wm 静态资产，文件名带内容哈希；2026-09-29 换新标，原 maas-test 拾贝图退役）。 */
 export const SHIBEI_LOGO_URL =
-  'https://maas-test.10rig.com/static/image/shibei-origin-logo.036e3d268e.png'
+  'https://wm.10rig.com:8443/brand/zhongbei-logo.a30739cc.png'
 
 /** 品牌文案（首屏 headline 与侧栏品牌名共用）。 */
 export const SHIBEI_BRAND_NAME = '中贝通信'

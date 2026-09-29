@@ -61,7 +61,7 @@ test('品牌常量：文案与 logo URL 形状', () => {
   assert.equal(SHIBEI_BRAND_NAME, '中贝通信')
   assert.match(
     SHIBEI_LOGO_URL,
-    /^https:\/\/maas-test\.10rig\.com\/static\/image\/shibei-origin-logo\.[0-9a-f]+\.png$/,
+    /^https:\/\/wm\.10rig\.com:8443\/brand\/zhongbei-logo\.[0-9a-f]+\.png$/,
   )
 })
 
