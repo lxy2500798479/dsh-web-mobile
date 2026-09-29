@@ -2,7 +2,7 @@ import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
 import { SHIBEI_BRAND_NAME, isHostHeroHeadline, isHostPreviewBadgeText } from '../core/brand.ts'
 
 /**
- * 首屏换牌（2026-09-28，拾贝起源部署）：标语替换 + 「预览版」徽标移除。
+ * 首屏换牌（2026-09-28，中贝通信部署）：标语替换 + 「预览版」徽标移除。
  *
  * 官方把「探索未至之境」硬写在 `conversation` 命名空间字典（`hero.headline`），
  * 「预览版」徽标同样只有字典 + 类名（`hero.preview` / CSS 本地名 `previewBadge`），

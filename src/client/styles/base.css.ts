@@ -65,6 +65,115 @@ export const BASE_CSS = `
   cursor: default;
 }
 
+/* Account row (customer line, 2026-09-29): circular avatar + username at the
+   drawer/sidebar bottom; clicking opens a one-button 「退出登录」 menu. The
+   portal merged the login entry into the workbench, so without this row the
+   customer has NO logout / account-switch surface. DELIBERATELY cross-width:
+   a customer's desktop browser has the same gap, so marker account is NOT
+   in the desktop hide block (misc.css.ts) — a deliberate exception to the
+   README's desktop no-op promise (user request, 2026-09-29). The component
+   renders nothing when /__portal/api/me is unreachable (bare instances and
+   signed-out states stay quiet at every width). */
+[data-mobile-nav="account"] {
+  position: relative;
+  min-width: 0;
+  max-width: 100%;
+}
+[data-mobile-nav="account-button"] {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  padding: 5px 8px;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--dsw-alias-label-primary, inherit);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 20px;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+[data-mobile-nav="account-button"]:hover {
+  background: var(--dsw-alias-interactive-bg-hover, rgba(0, 0, 0, .06));
+}
+[data-mobile-nav="account-button"]:focus-visible {
+  outline: 2px solid var(--dsw-alias-state-business-primary, #4f6ef7);
+  outline-offset: 1px;
+}
+[data-mobile-nav="account-avatar"] {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--dsw-alias-state-business-primary, #4f6ef7);
+  color: var(--dsw-alias-label-primary-foreground, #fff);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+}
+[data-mobile-nav="account-name"] {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+/* Host-menu recipe (Menu.module.css): translucent surface fill + 40px blur,
+   elevation-prominent card (hairline stroke + shadows), radius-lg; rows take
+   label-primary / interactive-bg-hover so both themes resolve correctly.
+   Do not substitute a hardcoded surface: --dsw-alias-bg-surface does NOT
+   exist in the host token set and its light fallback renders a white card
+   with white text in the dark theme (measured 2026-09-29, rig screenshot). */
+[data-mobile-nav="account-menu"] {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 6px);
+  z-index: 40;
+  min-width: 160px;
+  padding: 4px;
+  border: 0;
+  border-radius: var(--dsw-radius-lg, 12px);
+  --dsw-elevation-stroke-color: var(--dsw-alias-border-l1, rgba(0, 0, 0, .04));
+  box-shadow: var(--dsw-elevation-prominent, 0 0 0 .5px rgba(0, 0, 0, .04), 0 3px 8px 0 rgba(0, 0, 0, .04), 0 0 20px 0 rgba(0, 0, 0, .05));
+  background: var(--dsw-menu-surface-fill, #f8f9fa94);
+  -webkit-backdrop-filter: var(--dsw-menu-backdrop-filter, blur(40px) saturate(150%));
+  backdrop-filter: var(--dsw-menu-backdrop-filter, blur(40px) saturate(150%));
+}
+[data-mobile-nav="account-logout"] {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 34px;
+  padding: 6px 8px;
+  border: none;
+  border-radius: var(--dsw-radius-md, 8px);
+  background: transparent;
+  color: var(--dsw-alias-label-primary, inherit);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 20px;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+[data-mobile-nav="account-logout"]:hover:not(:disabled) {
+  background: var(--dsw-alias-interactive-bg-hover, rgba(0, 0, 0, .06));
+}
+[data-mobile-nav="account-logout"]:focus-visible {
+  outline: 2px solid var(--dsw-alias-state-business-primary, #4f6ef7);
+  outline-offset: 1px;
+}
+[data-mobile-nav="account-logout"]:disabled {
+  color: var(--dsw-alias-label-dimmed, rgba(0, 0, 0, .35));
+  cursor: default;
+}
+
 /* File download: the customer's only way to take a container file onto the
    device (host Web has no download surface; iOS standalone PWA ignores
    anchor downloads, so the control hands the file to the Web Share sheet).

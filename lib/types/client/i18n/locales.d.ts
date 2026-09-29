@@ -7,6 +7,9 @@ export declare const zh: {
     readonly backdrop: "点击关闭目录";
     readonly backToConversation: "返回会话";
     readonly sessionLog: "导出会话日志";
+    readonly accountLabel: "账号：{name}";
+    readonly logout: "退出登录";
+    readonly loggingOut: "正在退出…";
     readonly files: "文件浏览";
     readonly fileUpload: "添加文件";
     readonly download: "下载";

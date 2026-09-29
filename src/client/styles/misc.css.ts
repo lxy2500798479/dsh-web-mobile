@@ -258,10 +258,13 @@ export const MISC_CSS = `@media (max-width: 1023px) and (pointer: coarse) {
    display scaling dropped the CSS viewport below 1024px and armed the whole
    mobile shell on desktop).
 
-   The session-delete trio (menu item + confirm/error dialog) is the ONE
-   deliberate exception: its effect arms on TOUCH_QUERY (pointer: coarse at
+   The session-delete trio (menu item + confirm/error dialog) is deliberate
+   exception #1: its effect arms on TOUCH_QUERY (pointer: coarse at
    every width — large tablets in landscape), so it lives in the pointer-only
-   block below instead of this width arm. */
+   block below instead of this width arm. The account row (customer line,
+   2026-09-29; marker account) is likewise NOT listed here ON PURPOSE —
+   exception #2: the desktop customer needs a logout entry too; it self-hides
+   without a portal (see base.css.ts). */
 
 @media (min-width: 1024px), (pointer: fine), (pointer: none) {
   [data-mobile-nav="toggle"],

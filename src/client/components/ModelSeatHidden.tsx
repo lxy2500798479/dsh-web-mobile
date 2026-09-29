@@ -1,7 +1,7 @@
 import type { PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 
 /**
- * 模型座位遮蔽（2026-09-28，拾贝起源部署）：渲染为空。
+ * 模型座位遮蔽（2026-09-28，中贝通信部署）：渲染为空。
  *
  * 部署只有一个内置模型（qwen3.6-35b-a3b，模型固定），前端不提供模型/思考等级
  * 选择。座位 `conversation.input.model` 是宿主声明、dsh-client-ui-model-selection

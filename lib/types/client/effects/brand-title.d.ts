@@ -1,6 +1,6 @@
 import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client';
 /**
- * 浏览器标签品牌换牌（2026-09-29，拾贝起源部署）：**标题 + 图标**。
+ * 浏览器标签品牌换牌（2026-09-29，中贝通信部署）：**标题 + 图标**。
  *
  * 两者同属「浏览器标签 chrome」、同一触发机制（宿主 HTML 写死、无 slot 无配置面 ⇒
  * 客户端 DOM 覆盖），合并为一个效果模块（effects/ 模块数被仓库自检当作文档断言，

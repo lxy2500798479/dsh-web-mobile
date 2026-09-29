@@ -1,6 +1,7 @@
 import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
 import { MobileNavToggle } from './components/MobileNavToggle.tsx'
 import { MobileDrawerFooter } from './components/MobileDrawerFooter.tsx'
+import { AccountCard } from './components/AccountCard.tsx'
 import { ComposerFileButton } from './components/ComposerFileButton.tsx'
 import { FileDownloadButton, FileDownloadEmpty } from './components/FileDownloadButton.tsx'
 import { DeliverableDownloadButton } from './components/DeliverableDownloadButton.tsx'
@@ -253,15 +254,15 @@ export function apply(ctx: ClientContext): void {
 
   installAionuiCompat(ctx)
 
-  // 拾贝起源换牌：首屏标语「探索未至之境」的 DOM 替换（官方把该文本硬写在
+  // 中贝通信换牌：首屏标语「探索未至之境」的 DOM 替换（官方把该文本硬写在
   // conversation 字典里，没有 slot 也没有配置面，机制与边界见文件头）。
   installBrandHeadline(ctx)
 
-  // 拾贝起源换牌：浏览器标签标题的 DOM 覆盖（标题由宿主构建烘焙 DSH_CLIENT_TITLE，
+  // 中贝通信换牌：浏览器标签标题的 DOM 覆盖（标题由宿主构建烘焙 DSH_CLIENT_TITLE，
   // 不入 slot 系统；机制与边界见文件头）。
   installBrandTitle(ctx)
 
-  // 拾贝起源换牌：浏览器标签图标（favicon）的 DOM 覆盖（宿主 shell HTML 写死两个
+  // 中贝通信换牌：浏览器标签图标（favicon）的 DOM 覆盖（宿主 shell HTML 写死两个
   // SVG link，不入 slot 系统；机制与边界见文件头）。
   installBrandFavicon(ctx)
 
@@ -308,6 +309,21 @@ export function apply(ctx: ClientContext): void {
         ctx.sessionLogDownload.download(sessionId as unknown as DownloadSessionId),
     }),
   }, MobileDrawerFooter))
+
+  // ---- 账号行 / 退出登录（客户线，2026-09-29）----
+  // 登录入口与工作台合并成单一入口（门户 2026-09-29）后，页面上不再有任何
+  // 退出/换账号入口；dsh 实例自身无账号体系，身份与退出都在门户侧。沿用同一
+  // 个 sidebar.footer.action 槽，order 20 压在最底（会话日志 5、用量徽标 10
+  // 之下）。组件拉不到门户身份（/__portal/api/me 不可达：直连实例/内网实验
+  // 实例）时整块不渲染。刻意跨宽度：客户桌面浏览器同样需要退出入口（桌面
+  // no-op 承诺的 2026-09-29 例外，见 AGENTS.md 与 misc.css.ts 遮蔽块注记）。
+  ctx.slots.inject('sidebar.footer.action', () => ctx.slots.register({
+    name: 'sidebar.footer.action',
+    id: 'mobile-nav-account',
+    order: 20,
+    locale: NS,
+    inject: () => ({}),
+  }, AccountCard))
 
   // Composer file entry (0.1.6 host): the host deleted the paperclip attach
   // button, leaving the 「文件」row inside the "+" listbox as the only file
@@ -358,7 +374,7 @@ export function apply(ctx: ClientContext): void {
     locale: NS,
   }, DeliverableDownloadButton))
 
-  // ---- 拾贝起源品牌位（2026-09-28）----
+  // ---- 中贝通信品牌位（2026-09-28）----
   // 官方预留的品牌组合路径就是「占据 slot」（brand-official README「替换品牌」
   // 节：自有身份的部署不组合该包，而是组合另一个占据这些 slot 的包）。宿主回退
   // 分别是：首屏动画鱼 / 侧栏鱼形 / 「本地构建」标签。

@@ -1,4 +1,4 @@
-// brand.ts — 拾贝起源品牌常量与判据（品牌位占位与首屏文案替换共用）。
+// brand.ts — 中贝通信品牌常量与判据（品牌位占位与首屏文案替换共用）。
 // 零 DOM、零运行时 import：node --test 可直跑（type-stripping）。
 //
 // 品牌机制（2026-09-28）：
@@ -10,12 +10,12 @@
 //   dsh-client-locale 的 register 对同命名空间同 locale 重复注册会直接抛错），
 //   只能做 DOM 替换，见 effects/brand-headline.ts。
 
-/** 拾贝起源品牌图形（maas-test 静态资源，文件名带内容哈希）。 */
+/** 中贝通信品牌图形（maas-test 静态资源，文件名带内容哈希）。 */
 export const SHIBEI_LOGO_URL =
   'https://maas-test.10rig.com/static/image/shibei-origin-logo.036e3d268e.png'
 
 /** 品牌文案（首屏 headline 与侧栏品牌名共用）。 */
-export const SHIBEI_BRAND_NAME = '拾贝起源点智成金'
+export const SHIBEI_BRAND_NAME = '中贝通信'
 
 /** 宿主首屏标语的已知原文（zh / en 两套字典的 hero.headline）。 */
 export const HOST_HERO_HEADLINES: readonly string[] = ['探索未至之境', 'Into the Unknown']

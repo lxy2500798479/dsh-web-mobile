@@ -1,6 +1,6 @@
 import type { PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots';
 /**
- * 拾贝起源品牌位（2026-09-28）：占官方预留品牌 slot 的三个组件。
+ * 中贝通信品牌位（2026-09-28）：占官方预留品牌 slot 的三个组件。
  *
  * 只占据 slot、不改宿主源码；宿主给首屏 mark 的 className 是鱼形动画类
  * （pXSMma_fish 的 hover 游动），自有 Logo 不继承——尺寸走数值 props，几何靠

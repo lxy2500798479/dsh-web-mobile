@@ -1,7 +1,7 @@
-/** 拾贝起源品牌图形（maas-test 静态资源，文件名带内容哈希）。 */
+/** 中贝通信品牌图形（maas-test 静态资源，文件名带内容哈希）。 */
 export declare const SHIBEI_LOGO_URL = "https://maas-test.10rig.com/static/image/shibei-origin-logo.036e3d268e.png";
 /** 品牌文案（首屏 headline 与侧栏品牌名共用）。 */
-export declare const SHIBEI_BRAND_NAME = "\u62FE\u8D1D\u8D77\u6E90\u70B9\u667A\u6210\u91D1";
+export declare const SHIBEI_BRAND_NAME = "\u4E2D\u8D1D\u901A\u4FE1";
 /** 宿主首屏标语的已知原文（zh / en 两套字典的 hero.headline）。 */
 export declare const HOST_HERO_HEADLINES: readonly string[];
 /** 宿主首屏「预览版」徽标的已知文案（zh / en 两套字典的 hero.preview）。 */
