@@ -36,6 +36,11 @@
  *                     提示 `Loading plugins…` → 中文（2026-09-30 店主口径：这些字一律不显示，
  *                     下拉刷新也不能出现）。**首帧零闪烁由宿主半区在 HTML 出口注入同规则 CSS
  *                     保证**（宿主半区 compress.ts 的 shell-branding 段），此项是客户端兜底（插件加载后同规则生效）。
+ *  - documentViewerMenu 文档预览页头「查看器切换」菜单（候选渲染器：交互预览 / HTML / 代码 /
+ *                     纯文本）——客户形态不做多渲染器选择：官方「HTML」静态档对脚本页只能渲染
+ *                     残缺内容（店主实测「切换 HTML 只能渲染一部分」），「代码 / 纯文本」为
+ *                     开发者视角；文件统一按默认渲染器呈现（.html/.htm 走本插件「交互预览」，
+ *                     回退通道 = 预览页头「下载」按钮）——2026-09-30 店主口径
  *
  * 设计取舍（2026-09-29 开关化，店主口径「开关是代码层面的，不是配置到界面」）：
  * 一个总开关 + 每项一个配置；引擎（effects/deployment-mode.ts、index.tsx 座位注册）
@@ -70,6 +75,7 @@ export declare const config: {
             readonly permissionChip: true;
             readonly headerMore: true;
             readonly bootWordmark: true;
+            readonly documentViewerMenu: true;
         };
     };
 };

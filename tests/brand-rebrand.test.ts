@@ -276,6 +276,14 @@ test('更多操作按钮遮蔽：源码级接线守卫', async () => {
   assert.ok(source.includes('headerMore'), 'missing headerMore wiring')
 })
 
+test('文档预览「查看器切换」菜单收口：数据锚 + mask 接线 + 默认遮蔽（源码级守卫）', async () => {
+  const source = await readFile(join(root, 'src/client/effects/deployment-mode.ts'), 'utf8')
+  assert.ok(source.includes("'[data-document-viewer-menu]'"), 'missing viewer-menu data anchor')
+  assert.ok(source.includes('documentViewerMenu'), 'missing documentViewerMenu mask item wiring')
+  assert.ok(source.includes("if (maskEnabled('documentViewerMenu'))"), 'missing DOM pass branch')
+  assert.equal(maskEnabled('documentViewerMenu'), true, '客户形态默认遮蔽（行为零变化）')
+})
+
 test('界面收口开关：总开关 + 每项一配置，默认全遮（行为零变化）', () => {
   assert.equal(config.mask.master, true, '总开关默认必须为客户形态（按 items 遮蔽）')
   const ids = Object.keys(config.mask.items).sort()
@@ -286,8 +294,8 @@ test('界面收口开关：总开关 + 每项一配置，默认全遮（行为�
   )
   assert.equal(
     ids.length,
-    19,
-    '收口项共 19 项（最新四项：菜单命令行 / composer 权限胶囊 / 头部「更多操作」/ 启动页 vendor 字样）',
+    20,
+    '收口项共 20 项（最新五项：菜单命令行 / composer 权限胶囊 / 头部「更多操作」/ 启动页 vendor 字样 / 文档预览「查看器切换」菜单）',
   )
   for (const id of ids) {
     assert.equal(

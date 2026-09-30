@@ -64,6 +64,12 @@ import { type MaskItemId } from '../config.ts';
  * 服务端新代码混用会出怪状（消息不出回复等）。本机制周期性 no-store 取回文档根、
  * 抽同一 rev 与本地页面比对，不同即自动 `location.reload()` 一次，把旧页面收敛到
  * 新版。仅客户形态安装（开发调试形态保留手动刷新/热重载工作流）。
+ *
+ * 2026-09-30（店主截图实报）：**文档预览页头「查看器切换」菜单收口**——宿主 TextPreview
+ * 工具条的候选渲染器菜单（数据锚 `data-document-viewer-menu`，candidates>1 才渲染），客户
+ * 形态不再提供多渲染器选择：切官方「HTML」静态档对脚本页只渲染残缺内容（店主实测「只能
+ * 渲染一部分」），「代码 / 纯文本」是开发者视角。统一隐藏该菜单，文件按默认渲染器呈现
+ * （.html/.htm = 本插件「交互预览」；回退通道 = 预览页头「下载」按钮）。CSS 首帧 + DOM pass。
  */
 /** 逐项遮蔽清单元数据（id 对齐 config.mask.items；守卫测试比对两者）。 */
 export declare const MASK_ITEM_TITLES: Record<MaskItemId, string>;

@@ -65,6 +65,12 @@ import { config, maskEnabled, type MaskItemId } from '../config.ts'
  * 服务端新代码混用会出怪状（消息不出回复等）。本机制周期性 no-store 取回文档根、
  * 抽同一 rev 与本地页面比对，不同即自动 `location.reload()` 一次，把旧页面收敛到
  * 新版。仅客户形态安装（开发调试形态保留手动刷新/热重载工作流）。
+ *
+ * 2026-09-30（店主截图实报）：**文档预览页头「查看器切换」菜单收口**——宿主 TextPreview
+ * 工具条的候选渲染器菜单（数据锚 `data-document-viewer-menu`，candidates>1 才渲染），客户
+ * 形态不再提供多渲染器选择：切官方「HTML」静态档对脚本页只渲染残缺内容（店主实测「只能
+ * 渲染一部分」），「代码 / 纯文本」是开发者视角。统一隐藏该菜单，文件按默认渲染器呈现
+ * （.html/.htm = 本插件「交互预览」；回退通道 = 预览页头「下载」按钮）。CSS 首帧 + DOM pass。
  */
 
 /** 逐项遮蔽清单元数据（id 对齐 config.mask.items；守卫测试比对两者）。 */
@@ -88,6 +94,7 @@ export const MASK_ITEM_TITLES: Record<MaskItemId, string> = {
   permissionChip: 'composer 权限胶囊（访问模式）',
   headerMore: '会话头部「更多操作」(⋯) 按钮（下载 Session 日志 / 反馈）',
   bootWordmark: '启动页 vendor 字样（HARNESS / Loading plugins… → 品牌）',
+  documentViewerMenu: '文档预览页头「查看器切换」菜单（HTML / 代码 / 纯文本）',
 }
 
 /** 需要 DOM pass（含观察器重放）的收口项；全关时整段不安装。 */
@@ -104,6 +111,7 @@ const DOM_MASK_IDS: readonly MaskItemId[] = [
   'menuExtras',
   'permissionChip',
   'headerMore',
+  'documentViewerMenu',
 ]
 
 /** 任一 DOM 收口项启用（总开关 + 单项；全关 = pass 无需安装）。 */
@@ -225,6 +233,13 @@ export function isHeaderMoreLabel(label: string | null | undefined): boolean {
 /** 「更多操作」触发器选择器（zh/en aria-label 精确值；观察器与遮蔽共用）。 */
 const HEADER_MORE_SELECTOR = ['button[aria-label="更多操作"]', 'button[aria-label="More actions"]'].join(', ')
 
+/**
+ * 文档预览页头「查看器切换」菜单触发器（宿主 TextPreview 的候选渲染器菜单；0.1.7-rc.2
+ * 实测数据锚恒定 `data-document-viewer-menu`，candidates>1 时才渲染）。
+ * 2026-09-30 店主口径：客户形态不做多渲染器选择——统一隐藏。
+ */
+const DOCUMENT_VIEWER_MENU_SELECTOR = '[data-document-viewer-menu]'
+
 /** 侧栏会话列表行 / 搜索结果行（宿主树组件；桥接会话的标题 span 由 dsh-im 图标插件打位）。 */
 const IM_SESSION_ROW_SELECTOR = '[role="treeitem"][aria-selected], button[class*="searchResultRow"]'
 
@@ -311,6 +326,9 @@ const CSS_RULES_BY_ITEM: Partial<Record<MaskItemId, readonly string[]>> = {
     '[data-dsh-boot] [class*="_hint_"] { font-size: 0 !important; }',
     '[data-dsh-boot] [class*="_hint_"]::after { content: "正在加载…"; font-size: 12px; }',
   ],
+  // 文档预览页头「查看器切换」菜单触发器（宿主 TextPreview 的候选渲染器菜单；数据锚恒定，
+  // 见文件头同节）：切「HTML」静态档对脚本页只渲染残缺内容 → 客户形态不做多渲染器选择。
+  documentViewerMenu: ['[data-document-viewer-menu] { display: none !important; }'],
 }
 
 /** 启用项拼出的首帧样式（空串 = 不注入任何样式；总开关关 = 全空）。 */
@@ -347,6 +365,7 @@ const CUSTOMER_TARGET_SELECTOR = [
   IM_SESSION_ROW_SELECTOR,
   ACCESS_MODE_SELECTOR,
   HEADER_MORE_SELECTOR,
+  DOCUMENT_VIEWER_MENU_SELECTOR,
 ].join(', ')
 
 /** 面板行 → 收口项 id（纯函数，供单测；非收口行返回 null）。 */
@@ -407,6 +426,11 @@ export function applyCustomerMode(root: ParentNode): boolean {
   }
   if (maskEnabled('headerMore')) {
     for (const button of root.querySelectorAll(HEADER_MORE_SELECTOR)) hideElement(button)
+  }
+  if (maskEnabled('documentViewerMenu')) {
+    // 预览页头查看器切换菜单（0.1.7-rc.2 数据锚；该菜单打开态在 portal，隐藏触发器即
+    // 无法再打开；CSS 首帧规则已覆盖新建节点，这里兜 CSS 未生效的场景）。
+    hideAll(DOCUMENT_VIEWER_MENU_SELECTOR)
   }
   if (maskEnabled('imSessionRows')) {
     for (const row of root.querySelectorAll(IM_SESSION_ROW_SELECTOR)) {
