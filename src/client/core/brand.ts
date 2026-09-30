@@ -1,4 +1,4 @@
-// brand.ts — 中贝通信品牌常量与判据（品牌位占位与首屏文案替换共用）。
+// brand.ts — 拾贝智能体品牌常量与判据（品牌位占位与首屏文案替换共用）。
 // 零 DOM、零运行时 import：node --test 可直跑（type-stripping）。
 //
 // 品牌机制（2026-09-28）：
@@ -9,13 +9,17 @@
 // - 首屏标语「探索未至之境」不是 slot（硬写在 conversation 命名空间字典，且
 //   dsh-client-locale 的 register 对同命名空间同 locale 重复注册会直接抛错），
 //   只能做 DOM 替换，见 effects/brand-headline.ts。
+//
+// 品牌名史：拾贝起源点智成金（2026-09-28）→ 中贝通信（2026-09-30）→
+// 拾贝智能体（2026-09-30，本值）。只改文案不改图形时，logo 常量与 wm 静态资产
+// 一并保持即可。
 
 /** 中贝通信品牌图形（wm 静态资产，文件名带内容哈希；2026-09-29 换新标，原 maas-test 拾贝图退役）。 */
 export const SHIBEI_LOGO_URL =
   'https://wm.10rig.com:8443/brand/zhongbei-logo.a30739cc.png'
 
-/** 品牌文案（首屏 headline 与侧栏品牌名共用）。 */
-export const SHIBEI_BRAND_NAME = '中贝通信'
+/** 品牌文案（首屏 headline 与侧栏品牌名共用）。2026-09-30 由「中贝通信」改为「拾贝智能体」。 */
+export const SHIBEI_BRAND_NAME = '拾贝智能体'
 
 /** 宿主首屏标语的已知原文（zh / en 两套字典的 hero.headline）。 */
 export const HOST_HERO_HEADLINES: readonly string[] = ['探索未至之境', 'Into the Unknown']
