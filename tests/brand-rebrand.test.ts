@@ -48,6 +48,13 @@ import {
   parsePortalAccount,
   validatePasswordForm,
 } from '../src/client/components/account-card.ts'
+import {
+  BUILTIN_HTML_PREVIEW_ID,
+  HTML_LIVE_PREVIEW_ID,
+  decodeHtmlBytes,
+  htmlPreviewDefinition,
+  prefersChinese,
+} from '../src/client/core/html-preview.ts'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -522,4 +529,52 @@ test('改密弹窗（2026-09-29 晚）：菜单项 / 居中弹窗标记 / 门户
   const base = await readFile(join(root, 'src/client/styles/base.css.ts'), 'utf8')
   assert.ok(base.includes('[data-mobile-nav="account-password-dialog"]'), 'missing dialog styles')
   assert.ok(base.includes('[data-mobile-nav="account-password-overlay"]'), 'missing overlay styles')
+})
+
+// —— HTML 交互预览 + 浏览器桌面自动弹层（客户线，2026-09-30 并入）——
+test('HTML 交互预览注册数据：extension 优先级接管 .html/.htm，与官方 builtin 不重名', () => {
+  const def = htmlPreviewDefinition()
+  assert.equal(def.id, HTML_LIVE_PREVIEW_ID)
+  assert.notEqual(def.id, BUILTIN_HTML_PREVIEW_ID, '注册重名会抛 duplicate implementation')
+  assert.deepEqual([...def.extensions], ['html', 'htm'])
+  assert.equal(def.priority, 'extension', '插件实现排在 builtin 之前（默认选中取候选第一位）')
+  assert.equal(def.loading, 'bytes-complete')
+  assert.equal(def.wrap, false)
+  assert.ok(['交互预览', 'Interactive preview'].includes(def.title()))
+})
+
+test('HTML 交互预览：allow-scripts 沙箱 iframe + bytes 喂入 + 仅客户形态接线（源码级守卫）', async () => {
+  const component = await readFile(join(root, 'src/client/components/HtmlLivePreview.tsx'), 'utf8')
+  const sandbox = /sandbox="([^"]*)"/.exec(component)
+  assert.equal(sandbox?.[1], 'allow-scripts', 'sandbox 必须恰为 allow-scripts（不得放行 same-origin）')
+  assert.ok(component.includes('srcDoc={html}'), 'missing srcdoc rendering')
+  assert.ok(component.includes("content.kind === 'bytes'"), 'missing bytes-only content gate')
+  const effect = await readFile(join(root, 'src/client/effects/html-preview.ts'), 'utf8')
+  assert.ok(effect.includes("ctx.inject(['documentPreviews']"), 'missing optional documentPreviews injection')
+  assert.ok(effect.includes("ctx.slots.inject('sidebar.right.tab.document'"), 'missing keyed body slot')
+  assert.ok(effect.includes('if (!config.mask.master) return'), 'must install in customer form only')
+  const index = await readFile(join(root, 'src/client/index.tsx'), 'utf8')
+  assert.ok(index.includes('installHtmlPreview(ctx)'), 'missing installHtmlPreview wiring')
+})
+
+test('浏览器桌面自动弹层：CSS 首帧 + DOM pass 双遮、观察器触发器同步扩（源码级守卫）', async () => {
+  const source = await readFile(join(root, 'src/client/effects/deployment-mode.ts'), 'utf8')
+  assert.ok(source.includes('section[role="dialog"][aria-label^="浏览器桌面"]'), 'missing zh dialog hide')
+  assert.ok(source.includes('section[role="dialog"][aria-label^="Browser desktop"]'), 'missing en dialog hide')
+  assert.ok(source.includes('BROWSER_DESKTOP_DIALOG_SELECTOR'), 'missing dialog selector wiring')
+  assert.ok(source.includes("'[aria-label*=\"浏览器桌面\"]'"), 'observer trigger must cover the dialog')
+})
+
+test('交互预览语言判定：zh 主、en 兜底、未知取中文', () => {
+  assert.equal(prefersChinese('zh-CN'), true)
+  assert.equal(prefersChinese('ZH'), true)
+  assert.equal(prefersChinese('en-US'), false)
+  assert.equal(prefersChinese(''), true)
+  assert.equal(prefersChinese(null), true)
+  assert.equal(prefersChinese(undefined), true)
+})
+
+test('HTML 字节解码：UTF-8 容错（坏字节不抛）', () => {
+  assert.equal(decodeHtmlBytes(new TextEncoder().encode('<p>你好</p>')), '<p>你好</p>')
+  assert.ok(decodeHtmlBytes(new Uint8Array([0xe4, 0xbd])).length > 0)
 })

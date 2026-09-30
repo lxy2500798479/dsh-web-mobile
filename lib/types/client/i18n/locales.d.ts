@@ -33,6 +33,7 @@ export declare const zh: {
     readonly downloadShared: "已保存或已分享：{name}";
     readonly previewFullscreen: "全屏预览";
     readonly previewExitFullscreen: "退出全屏";
+    readonly htmlPreviewFrame: "HTML 交互预览";
     readonly deleteSession: "删除会话";
     readonly deleteConfirmTitle: "删除会话？";
     readonly deleteConfirmDesc: "将删除「{title}」的完整会话记录，此操作不可恢复。";

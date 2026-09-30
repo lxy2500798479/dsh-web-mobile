@@ -23,6 +23,12 @@ import { config, maskEnabled, type MaskItemId } from '../config.ts'
  *  ② 会话头部的预设 chip（`conversation.session.header.actions` 槽里的「标准模式」
  *     标签；槽容器 display:contents 无盒，遮蔽其 span 子元素）；
  *  ③ 侧栏页脚「浏览器桌面」入口（@runzhliu/dsh-browser-desktop，按文案指纹 zh/en 匹配）；
+ *     **2026-09-30 追补：同插件还有一个「浏览器桌面 · 人工接管」自动弹层**——agent 一旦
+ *     调用其 `browser_open` 工具，宿主 `/browser-desktop/state` 的 revision 变化，前端
+ *     750ms 轮询即自动 `setOpened(true)` 弹层（无需用户操作；客户实例公网无 6080 通路，
+ *     浮层里的桌面地址必失败，纯惊吓源）。处理 = 客户形态一并遮蔽：CSS 首帧规则按
+ *     aria-label 前缀命中（元素一创建即隐形，无闪现）+ DOM pass 收「任何 aria-label
+ *     命中指纹的元素」（按钮 + `section[role="dialog"]` 浮层）。Agent 侧工具不受影响；
  *  ④ 「内测声明」弹窗（宿主 settings-models 的 welcome-notice 步骤；远程浏览器走
  *     memory-mode 每次载入必弹且遮罩拦点击）——**处理方式 = 使其对用户不可见且不阻塞**：
  *     ① 模块求值即注入 CSS（早于设置壳渲染 ⇒ 从未被绘制，无闪现）把该 overlay 整体
@@ -70,7 +76,7 @@ export const MASK_ITEM_TITLES: Record<MaskItemId, string> = {
   rowBrowser: '面板行「浏览器」',
   mobileNavFiles: '移动壳「文件浏览」按钮',
   headerPresetChip: '会话头部预设 chip「标准模式」',
-  browserDesktop: '侧栏「浏览器桌面」入口',
+  browserDesktop: '「浏览器桌面」入口与自动弹层',
   menuModel: '触发候选菜单「模型」行',
   welcomeDialog: '「内测声明」弹窗',
   openInApp: '「用文件管理器打开」整族',
@@ -123,8 +129,14 @@ const MOBILE_NAV_FILES_SELECTOR = '[data-mobile-nav="files"]'
 // · 预设 chip 标签（见文件头 §扩展②；拼接写法避免模板字符串）
 const PRESET_CHIP_SELECTOR = HEADER_ACTIONS_SLOT_SELECTOR + ' > span'
 
-/** 「浏览器桌面」入口按钮文案指纹（小写包含匹配；zh 为主、en 兜底）。 */
+/** 「浏览器桌面」入口按钮/弹层文案指纹（小写包含匹配；zh 为主、en 兜底）。 */
 const BROWSER_DESKTOP_HINTS = ['浏览器桌面', 'browser desktop', 'take over'] as const
+
+/** 「浏览器桌面」自动弹层（section[role=dialog]）的文案前缀选择器（zh/en；插件 messages.browserDialog）。 */
+const BROWSER_DESKTOP_DIALOG_SELECTOR = [
+  'section[role="dialog"][aria-label^="浏览器桌面"]',
+  'section[role="dialog"][aria-label^="Browser desktop"]',
+].join(', ')
 
 /** 该按钮是否属于「浏览器桌面」入口（纯函数，供单测）。 */
 export function isBrowserDesktopLabel(label: string | null | undefined): boolean {
@@ -261,6 +273,14 @@ const CSS_RULES_BY_ITEM: Partial<Record<MaskItemId, readonly string[]>> = {
     'body > div:not(#root):has([role="dialog"][aria-label="内测声明"]) { display: none !important; }',
     'body > div:not(#root):has([role="dialog"][aria-label="Internal Testing Notice"]) { display: none !important; }',
   ],
+  // 「浏览器桌面」**自动弹层**（2026-09-30 追补；见文件头 §扩展③ 追补段）。agent 调
+  // `browser_open` → 前端轮询自动弹层，无需用户操作；客户公网无 6080 通路、浮层必失败。
+  // 首帧即隐形：元素一创建就命中（display:none 覆盖插件内联 display:flex），零闪现；
+  // DOM pass 再按同指纹收按钮 + 弹层，双保险。
+  browserDesktop: [
+    'section[role="dialog"][aria-label^="浏览器桌面"] { display: none !important; }',
+    'section[role="dialog"][aria-label^="Browser desktop"] { display: none !important; }',
+  ],
   // ui-open-in-app 的整族「在本机打开」控件（标记 `data-open-target`；取值：file =
   // 预览页头/交付卡片，directory = 会话头部「用文件管理器打开」）：容器形态里没有
   // 可用的本机文件管理器，整族都是死按钮（2026-09-29 店主实机「点了也没有用」；
@@ -320,7 +340,8 @@ const CUSTOMER_TARGET_SELECTOR = [
   PANEL_ROW_SELECTOR,
   MOBILE_NAV_FILES_SELECTOR,
   PRESET_CHIP_SELECTOR,
-  'button[aria-label*="浏览器桌面"]',
+  '[aria-label*="浏览器桌面"]',
+  BROWSER_DESKTOP_DIALOG_SELECTOR,
   COMMAND_OPTION_SELECTOR,
   WELCOME_DIALOG_SELECTOR,
   IM_SESSION_ROW_SELECTOR,
@@ -361,9 +382,11 @@ export function applyCustomerMode(root: ParentNode): boolean {
   if (maskEnabled('mobileNavFiles')) hideAll(MOBILE_NAV_FILES_SELECTOR)
   if (maskEnabled('headerPresetChip')) hideAll(PRESET_CHIP_SELECTOR)
   if (maskEnabled('browserDesktop')) {
-    for (const button of root.querySelectorAll('button[aria-label]')) {
-      if (!isBrowserDesktopLabel(button.getAttribute('aria-label'))) continue
-      hideElement(button)
+    // 侧栏入口按钮 + 自动弹层（section[role=dialog]；browser_open 触发即弹、无用户操作）。
+    // CSS 首帧规则已兜住弹层隐形，这里按同一指纹重复确认，兼容 CSS 未生效的场景。
+    for (const element of root.querySelectorAll('button[aria-label], ' + BROWSER_DESKTOP_DIALOG_SELECTOR)) {
+      if (!isBrowserDesktopLabel(element.getAttribute('aria-label'))) continue
+      hideElement(element)
     }
   }
   if (maskEnabled('menuModel')) {

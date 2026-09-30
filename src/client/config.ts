@@ -15,7 +15,7 @@
  *  - rowBrowser       面板行「浏览器」
  *  - mobileNavFiles   移动壳「文件浏览」按钮
  *  - headerPresetChip 会话头部预设 chip「标准模式」
- *  - browserDesktop   侧栏「浏览器桌面」入口（文案指纹）
+ *  - browserDesktop   「浏览器桌面」入口与自动弹层（文案指纹）
  *  - menuModel        触发候选菜单（+ / 斜杠）「模型」行（文案指纹）
  *  - welcomeDialog    「内测声明」弹窗（CSS 首帧 + 摘 inert）
  *  - openInApp        「用文件管理器打开」整族（[data-open-target]）

@@ -22,6 +22,12 @@ import { type MaskItemId } from '../config.ts';
  *  ② 会话头部的预设 chip（`conversation.session.header.actions` 槽里的「标准模式」
  *     标签；槽容器 display:contents 无盒，遮蔽其 span 子元素）；
  *  ③ 侧栏页脚「浏览器桌面」入口（@runzhliu/dsh-browser-desktop，按文案指纹 zh/en 匹配）；
+ *     **2026-09-30 追补：同插件还有一个「浏览器桌面 · 人工接管」自动弹层**——agent 一旦
+ *     调用其 `browser_open` 工具，宿主 `/browser-desktop/state` 的 revision 变化，前端
+ *     750ms 轮询即自动 `setOpened(true)` 弹层（无需用户操作；客户实例公网无 6080 通路，
+ *     浮层里的桌面地址必失败，纯惊吓源）。处理 = 客户形态一并遮蔽：CSS 首帧规则按
+ *     aria-label 前缀命中（元素一创建即隐形，无闪现）+ DOM pass 收「任何 aria-label
+ *     命中指纹的元素」（按钮 + `section[role="dialog"]` 浮层）。Agent 侧工具不受影响；
  *  ④ 「内测声明」弹窗（宿主 settings-models 的 welcome-notice 步骤；远程浏览器走
  *     memory-mode 每次载入必弹且遮罩拦点击）——**处理方式 = 使其对用户不可见且不阻塞**：
  *     ① 模块求值即注入 CSS（早于设置壳渲染 ⇒ 从未被绘制，无闪现）把该 overlay 整体
