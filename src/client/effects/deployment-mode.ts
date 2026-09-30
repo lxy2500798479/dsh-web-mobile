@@ -170,6 +170,13 @@ const WELCOME_DIALOG_SELECTOR = [
 /** 触发候选菜单（+ / 斜杠）里可点击的命令行（conversation.input.overlay 槽内 listbox 选项）。 */
 const COMMAND_OPTION_SELECTOR = '[data-slot="conversation.input.overlay"] [role="option"]'
 
+/**
+ * 触发候选菜单里的**分组标题**（MenuView：`<div role="presentation" data-source="…">指令</div>`）。
+ * 它与候选行是**兄弟节点**（宿主不包一层 group 容器），所以行被藏掉后标题会孤单留下 —— 收口时
+ * 需要单独判定。选择器只用 `role` + `data-source` 两个稳定锚（类名是宿主构建哈希）。
+ */
+const COMMAND_GROUP_TITLE_SELECTOR = '[data-slot="conversation.input.overlay"] [role="presentation"][data-source]'
+
 /** 菜单里「模型」命令行的描述指纹（小写包含匹配；zh 为主、en 兜底）。 */
 const MODEL_COMMAND_HINTS = ['选择本会话使用的模型', 'select the model for this conversation'] as const
 
@@ -205,6 +212,33 @@ export function isMenuKeepRow(text: string | null | undefined): boolean {
 export function isMenuRowExempt(id: string | null | undefined): boolean {
   if (typeof id !== 'string') return false
   return MENU_SOURCE_EXEMPT_PREFIXES.some((prefix) => id.startsWith(prefix))
+}
+
+/**
+ * 分组标题是否已成「孤儿」：它名下至少有一行候选、且**全部**被隐藏。
+ *
+ * 收口菜单命令行后标题会单独留在菜单里（2026-09-30 店主实测：菜单只剩「文件/目标/计划」，
+ * 底下却还挂着「指令」两个字）——故整组收完时把标题一并隐藏。
+ * @param visibleRows - 该标题名下各候选行的「是否仍可见」。
+ * @returns true = 该标题应被隐藏。
+ */
+export function isOrphanGroupTitle(visibleRows: readonly boolean[]): boolean {
+  return visibleRows.length > 0 && visibleRows.every((visible) => !visible)
+}
+
+/**
+ * 收集某分组标题名下各候选行的可见性（标题与行是兄弟节点，按文档序向后扫到下一个标题为止）。
+ * 只读本插件写入的 inline `display`（收口就是它写的），避免每轮 pass 触发 getComputedStyle 布局。
+ */
+function groupRowVisibility(title: Element): boolean[] {
+  const visible: boolean[] = []
+  for (let node = title.nextElementSibling; node !== null; node = node.nextElementSibling) {
+    if (node.matches(COMMAND_GROUP_TITLE_SELECTOR)) break
+    if (node.getAttribute('role') !== 'option') continue
+    const inline = node instanceof HTMLElement ? node.style.display : ''
+    visible.push(inline !== 'none')
+  }
+  return visible
 }
 
 /** composer 权限胶囊（访问模式）的 aria-label 指纹（zh 为主、en 兜底）。 */
@@ -361,6 +395,7 @@ const CUSTOMER_TARGET_SELECTOR = [
   '[aria-label*="浏览器桌面"]',
   BROWSER_DESKTOP_DIALOG_SELECTOR,
   COMMAND_OPTION_SELECTOR,
+  COMMAND_GROUP_TITLE_SELECTOR,
   WELCOME_DIALOG_SELECTOR,
   IM_SESSION_ROW_SELECTOR,
   ACCESS_MODE_SELECTOR,
@@ -419,6 +454,10 @@ export function applyCustomerMode(root: ParentNode): boolean {
       if (isMenuRowExempt(option.id)) continue
       if (isMenuKeepRow(option.textContent)) continue
       hideElement(option)
+    }
+    // 行收完后再判定标题：整组命令行都被收掉 → 标题会成孤儿，一并隐藏（同上截图）。
+    for (const title of root.querySelectorAll(COMMAND_GROUP_TITLE_SELECTOR)) {
+      if (isOrphanGroupTitle(groupRowVisibility(title))) hideElement(title)
     }
   }
   if (maskEnabled('permissionChip')) {

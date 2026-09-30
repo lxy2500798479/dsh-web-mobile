@@ -83,6 +83,15 @@ export declare function isModelCommandRow(text: string | null | undefined): bool
 export declare function isMenuKeepRow(text: string | null | undefined): boolean;
 /** 该候选行是否来自技能 / 引用来源（免收口；纯函数，供单测）。 */
 export declare function isMenuRowExempt(id: string | null | undefined): boolean;
+/**
+ * 分组标题是否已成「孤儿」：它名下至少有一行候选、且**全部**被隐藏。
+ *
+ * 收口菜单命令行后标题会单独留在菜单里（2026-09-30 店主实测：菜单只剩「文件/目标/计划」，
+ * 底下却还挂着「指令」两个字）——故整组收完时把标题一并隐藏。
+ * @param visibleRows - 该标题名下各候选行的「是否仍可见」。
+ * @returns true = 该标题应被隐藏。
+ */
+export declare function isOrphanGroupTitle(visibleRows: readonly boolean[]): boolean;
 /** 该 aria-label 是否属于权限胶囊（纯函数，供单测）。 */
 export declare function isAccessModeLabel(label: string | null | undefined): boolean;
 /** 该按钮是否属于会话头部「更多操作」(⋯)（纯函数，供单测）。 */

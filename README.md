@@ -32,6 +32,11 @@
 
 ## 更新内容
 
+### v3.1.0-lxy.21（客户线 · 兼容 0.1.7-rc.1 / rc.2）
+
+- **修**：触发候选菜单收口后**残留分组标题**——命令行被收掉后，分组标题（`role="presentation" data-source=…`，与候选行是兄弟节点、宿主不包容器）会孤单留下（2026-09-30 实测：菜单只剩「文件 / 目标 / 计划」，底下还挂着「指令」两个字）。现在**整组收完连标题一起隐藏**；只要该组还有任一行可见（技能 / @ 引用来源的行不受收口，或未收的命令行），标题照常保留
+- 回归：`tests/brand-rebrand.test.ts` 新增孤儿标题判定（含「有可见行 → 标题必须留」「空组不能判孤儿」）与源码级接线守卫
+
 ### v3.1.0-lxy.20（客户线 · 兼容 0.1.7-rc.1 / rc.2）
 
 - **HTML 交付物恢复交互预览**（2026-09-30 店主报障：pyecharts 一类交付页空白）：客户形态此前因开发者工具门关闭而降到静态档（宿主 `BasicHtmlFrame`，`sandbox=""` 拦脚本）。本版注册 **extension 优先级**的自有 HTML 预览实现（`src/client/core/html-preview.ts` + `components/HtmlLivePreview.tsx`）——`iframe sandbox="allow-scripts"` 渲染、与官方 devtools 门**解耦**；默认接管 `.html/.htm`，官方 builtin 仍在、工具条可切回

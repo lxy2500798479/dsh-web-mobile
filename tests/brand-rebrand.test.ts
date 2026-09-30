@@ -34,6 +34,7 @@ import {
   isAccessModeLabel,
   isHeaderMoreLabel,
   isMenuKeepRow,
+  isOrphanGroupTitle,
   isMenuRowExempt,
   isModelCommandRow,
   isWelcomeNoticeLabel,
@@ -255,6 +256,25 @@ test('菜单命令行收口 + 权限胶囊：源码级接线守卫', async () =>
   assert.ok(source.includes('menuExtras'), 'missing menuExtras wiring')
   assert.ok(source.includes('ACCESS_MODE_HINTS'), 'missing access-mode hints')
   assert.ok(source.includes('permissionChip'), 'missing permissionChip wiring')
+})
+
+test('分组标题孤儿判定：整组命令行被收掉时标题一并隐藏', () => {
+  // 2026-09-30 实测：菜单只剩「文件/目标/计划」，底下却还挂着「指令」两个字。
+  assert.equal(isOrphanGroupTitle([false, false, false]), true)
+  assert.equal(isOrphanGroupTitle([false, true]), false, '还有一行可见 → 标题必须留')
+  assert.equal(isOrphanGroupTitle([true]), false)
+  assert.equal(isOrphanGroupTitle([]), false, '无行候选（pending/空组）不能判成孤儿')
+})
+
+test('分组标题收口：源码级接线守卫', async () => {
+  const source = await readFile(join(root, 'src/client/effects/deployment-mode.ts'), 'utf8')
+  assert.ok(source.includes('COMMAND_GROUP_TITLE_SELECTOR'), 'missing group-title selector')
+  assert.ok(source.includes('isOrphanGroupTitle'), 'missing orphan-title predicate')
+  assert.ok(source.includes('groupRowVisibility'), 'missing group row visibility walker')
+  assert.ok(
+    source.includes('[data-slot="conversation.input.overlay"] [role="presentation"][data-source]'),
+    'group title selector must anchor on role + data-source (hashed class is unstable)',
+  )
 })
 
 test('会话头部「更多操作」(⋯) 指纹：命中 zh/en，其它按钮不误伤', () => {
