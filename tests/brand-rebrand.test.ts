@@ -31,6 +31,10 @@ import {
   bootRevOf,
   isBrowserDesktopLabel,
   isImSessionTitle,
+  isAccessModeLabel,
+  isHeaderMoreLabel,
+  isMenuKeepRow,
+  isMenuRowExempt,
   isModelCommandRow,
   isWelcomeNoticeLabel,
   panelRowMaskId,
@@ -206,6 +210,64 @@ test('IM 桥接会话标题指纹：命中各通道前缀，普通会话不误�
   assert.equal(isImSessionTitle(null), false)
 })
 
+test('触发候选菜单命令行收口：只留「文件 / 目标 / 计划」，技能与引用免收', () => {
+  // 保留项（宿主行文本 = 中文名 + 英文命令名，见店主截图）
+  assert.equal(isMenuKeepRow('文件file'), true)
+  assert.equal(isMenuKeepRow('目标goal设置或查看长期任务目标'), true)
+  assert.equal(isMenuKeepRow('计划plan进入或退出计划模式'), true)
+  // 收口项（2026-09-30 店主口径：➕ 里一律不露出）
+  assert.equal(isMenuKeepRow('反馈feedback发送关于当前会话的反馈'), false)
+  assert.equal(isMenuKeepRow('压缩compact压缩以上对话内容'), false)
+  assert.equal(isMenuKeepRow('权限permission切换权限预设（沙箱模式与审批策略）'), false)
+  assert.equal(isMenuKeepRow('下载日志export将会话内容导出为 ZIP'), false)
+  assert.equal(isMenuKeepRow(''), false)
+  assert.equal(isMenuKeepRow(null), false)
+  assert.equal(isMenuKeepRow(undefined), false)
+  // 来源免收：技能 / @ 引用（宿主原生能力，不在命令行收口范围）
+  assert.equal(isMenuRowExempt('dsh-slash-option-skill-0'), true)
+  assert.equal(isMenuRowExempt('dsh-slash-option-@-0'), true)
+  assert.equal(isMenuRowExempt('dsh-slash-option-command-3'), false)
+  assert.equal(isMenuRowExempt(''), false)
+  assert.equal(isMenuRowExempt(null), false)
+})
+
+test('权限胶囊指纹：命中 zh/en aria-label，其它按钮不误伤', () => {
+  assert.equal(isAccessModeLabel('访问模式，当前：完全权限'), true)
+  assert.equal(isAccessModeLabel('Access mode, current: Full access'), true)
+  assert.equal(isAccessModeLabel('命令'), false)
+  assert.equal(isAccessModeLabel('打开目录'), false)
+  assert.equal(isAccessModeLabel(''), false)
+  assert.equal(isAccessModeLabel(null), false)
+  assert.equal(isAccessModeLabel(undefined), false)
+})
+
+test('菜单命令行收口 + 权限胶囊：源码级接线守卫', async () => {
+  const source = await readFile(join(root, 'src/client/effects/deployment-mode.ts'), 'utf8')
+  assert.ok(source.includes('MENU_KEEP_HINTS'), 'missing menu keep-list hints')
+  assert.ok(source.includes('menuExtras'), 'missing menuExtras wiring')
+  assert.ok(source.includes('ACCESS_MODE_HINTS'), 'missing access-mode hints')
+  assert.ok(source.includes('permissionChip'), 'missing permissionChip wiring')
+})
+
+test('会话头部「更多操作」(⋯) 指纹：命中 zh/en，其它按钮不误伤', () => {
+  assert.equal(isHeaderMoreLabel('更多操作'), true)
+  assert.equal(isHeaderMoreLabel(' 更多操作 '), true)
+  assert.equal(isHeaderMoreLabel('More actions'), true)
+  assert.equal(isHeaderMoreLabel('更多'), false)
+  assert.equal(isHeaderMoreLabel('命令'), false)
+  assert.equal(isHeaderMoreLabel('打开目录'), false)
+  assert.equal(isHeaderMoreLabel(''), false)
+  assert.equal(isHeaderMoreLabel(null), false)
+  assert.equal(isHeaderMoreLabel(undefined), false)
+})
+
+test('更多操作按钮遮蔽：源码级接线守卫', async () => {
+  const source = await readFile(join(root, 'src/client/effects/deployment-mode.ts'), 'utf8')
+  assert.ok(source.includes('HEADER_MORE_LABELS'), 'missing header-more labels')
+  assert.ok(source.includes('button[aria-label="更多操作"]'), 'missing header-more selector')
+  assert.ok(source.includes('headerMore'), 'missing headerMore wiring')
+})
+
 test('界面收口开关：总开关 + 每项一配置，默认全遮（行为零变化）', () => {
   assert.equal(config.mask.master, true, '总开关默认必须为客户形态（按 items 遮蔽）')
   const ids = Object.keys(config.mask.items).sort()
@@ -216,8 +278,8 @@ test('界面收口开关：总开关 + 每项一配置，默认全遮（行为�
   )
   assert.equal(
     ids.length,
-    15,
-    '收口项共 15 项（含最新三项：菜单「模型」行 / 本轮用量胶囊 / IM 桥接会话行）',
+    18,
+    '收口项共 18 项（最新三项：菜单命令行收口 / composer 权限胶囊 / 头部「更多操作」）',
   )
   for (const id of ids) {
     assert.equal(
@@ -229,6 +291,9 @@ test('界面收口开关：总开关 + 每项一配置，默认全遮（行为�
   assert.equal(maskEnabled('turnUsage'), true)
   assert.equal(maskEnabled('menuModel'), true)
   assert.equal(maskEnabled('imSessionRows'), true)
+  assert.equal(maskEnabled('menuExtras'), true)
+  assert.equal(maskEnabled('permissionChip'), true)
+  assert.equal(maskEnabled('headerMore'), true)
 })
 
 test('内测声明弹窗指纹：命中 zh/en，普通对话框不误伤', async () => {

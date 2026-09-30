@@ -67,6 +67,14 @@ export declare function isBrowserDesktopLabel(label: string | null | undefined):
 export declare function isWelcomeNoticeLabel(label: string | null | undefined): boolean;
 /** 该菜单行是否属于「模型」命令（纯函数，供单测）。 */
 export declare function isModelCommandRow(text: string | null | undefined): boolean;
+/** 该候选行是否属于要保留的三项之一（纯函数，供单测）。 */
+export declare function isMenuKeepRow(text: string | null | undefined): boolean;
+/** 该候选行是否来自技能 / 引用来源（免收口；纯函数，供单测）。 */
+export declare function isMenuRowExempt(id: string | null | undefined): boolean;
+/** 该 aria-label 是否属于权限胶囊（纯函数，供单测）。 */
+export declare function isAccessModeLabel(label: string | null | undefined): boolean;
+/** 该按钮是否属于会话头部「更多操作」(⋯)（纯函数，供单测）。 */
+export declare function isHeaderMoreLabel(label: string | null | undefined): boolean;
 /** 该标题是否属于 IM 桥接会话（纯函数，供单测）：精确前缀 + 前缀后必须有非空标题。 */
 export declare function isImSessionTitle(text: string | null | undefined): boolean;
 /** 面板行 → 收口项 id（纯函数，供单测；非收口行返回 null）。 */

@@ -24,6 +24,14 @@
  *  - turnUsage        每轮动作行「本轮用量」胶囊
  *  - imSessionRows    IM 桥接会话行（dsh-im「Matrix · …」等通道会话；侧栏列表/搜索结果不露出
  *                     ——2026-09-30 店主口径：聊天在 IM 侧，工作台里再出现 = 多余）
+ *  - menuExtras       触发候选菜单（+ / 斜杠）里「文件 / 目标 / 计划」以外的命令行
+ *                     （2026-09-30 店主口径：➕ 里只留这三项，反馈/压缩/权限/下载日志等一律不露出；
+ *                     技能与 @ 引用来源的行不受影响）
+ *  - permissionChip   composer 权限胶囊（访问模式；客户形态默认已是完全权限，选择器不再需要
+ *                     ——2026-09-30 店主口径：把这个去掉，默认就是完全权限）
+ *  - headerMore       会话头部右上角「更多操作」(⋯) 按钮（宿主 session-log-export 的
+ *                     `header.more`；点开只有「下载 Session 日志 / 反馈」两项，客户形态不露出
+ *                     ——2026-09-30 店主口径）
  *
  * 设计取舍（2026-09-29 开关化，店主口径「开关是代码层面的，不是配置到界面」）：
  * 一个总开关 + 每项一个配置；引擎（effects/deployment-mode.ts、index.tsx 座位注册）
@@ -54,6 +62,9 @@ export declare const config: {
             readonly terminalCard: true;
             readonly turnUsage: true;
             readonly imSessionRows: true;
+            readonly menuExtras: true;
+            readonly permissionChip: true;
+            readonly headerMore: true;
         };
     };
 };

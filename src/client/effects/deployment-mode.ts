@@ -78,6 +78,9 @@ export const MASK_ITEM_TITLES: Record<MaskItemId, string> = {
   terminalCard: '「新建终端」入口卡',
   turnUsage: '本轮用量胶囊',
   imSessionRows: 'IM 桥接会话行（dsh-im 通道会话：Matrix · …）',
+  menuExtras: '触发候选菜单里「文件 / 目标 / 计划」以外的命令行',
+  permissionChip: 'composer 权限胶囊（访问模式）',
+  headerMore: '会话头部「更多操作」(⋯) 按钮（下载 Session 日志 / 反馈）',
 }
 
 /** 需要 DOM pass（含观察器重放）的收口项；全关时整段不安装。 */
@@ -91,6 +94,9 @@ const DOM_MASK_IDS: readonly MaskItemId[] = [
   'menuModel',
   'welcomeDialog',
   'imSessionRows',
+  'menuExtras',
+  'permissionChip',
+  'headerMore',
 ]
 
 /** 任一 DOM 收口项启用（总开关 + 单项；全关 = pass 无需安装）。 */
@@ -152,6 +158,59 @@ export function isModelCommandRow(text: string | null | undefined): boolean {
   const lowered = text.toLowerCase()
   return MODEL_COMMAND_HINTS.some((hint) => lowered.includes(hint))
 }
+
+/**
+ * 触发候选菜单里要**保留**的命令行文案（其余命令行一律遮蔽）。
+ * 2026-09-30 店主口径：➕ 里只留「文件 / 目标 / 计划」。
+ */
+// 只收中文名：客户形态固定 zh（实例 settings `locale.preference = zh`）；英文命令名
+// （file/goal/plan）是行内附注，且子串匹配会误伤（profile 含 "file"、explain 含 "plan"）。
+const MENU_KEEP_HINTS = ['文件', '目标', '计划'] as const
+
+/**
+ * 行 id 的来源免收前缀（`optionId()` = `dsh-slash-option-<source>-<index>`）。
+ * 技能与 @ 引用是宿主原生能力，不在「命令行收口」范围内。
+ */
+const MENU_SOURCE_EXEMPT_PREFIXES = ['dsh-slash-option-skill-', 'dsh-slash-option-@'] as const
+
+/** 该候选行是否属于要保留的三项之一（纯函数，供单测）。 */
+export function isMenuKeepRow(text: string | null | undefined): boolean {
+  if (typeof text !== 'string') return false
+  const lowered = text.toLowerCase()
+  return MENU_KEEP_HINTS.some((hint) => lowered.includes(hint))
+}
+
+/** 该候选行是否来自技能 / 引用来源（免收口；纯函数，供单测）。 */
+export function isMenuRowExempt(id: string | null | undefined): boolean {
+  if (typeof id !== 'string') return false
+  return MENU_SOURCE_EXEMPT_PREFIXES.some((prefix) => id.startsWith(prefix))
+}
+
+/** composer 权限胶囊（访问模式）的 aria-label 指纹（zh 为主、en 兜底）。 */
+const ACCESS_MODE_HINTS = ['访问模式', 'access mode'] as const
+
+/** 该 aria-label 是否属于权限胶囊（纯函数，供单测）。 */
+export function isAccessModeLabel(label: string | null | undefined): boolean {
+  if (typeof label !== 'string') return false
+  return ACCESS_MODE_HINTS.some((hint) => label.toLowerCase().includes(hint))
+}
+
+/** 权限胶囊触发器选择器（zh/en aria-label 前缀；观察器与遮蔽共用）。 */
+const ACCESS_MODE_SELECTOR = ['[aria-label^="访问模式"]', '[aria-label^="Access mode"]'].join(', ')
+
+/**
+ * 会话头部「更多操作」(⋯) 按钮的 aria-label（宿主 `dsh-session-log-export` 的
+ * `header.more`；精确匹配，避免误伤其它「更多」语义的按钮）。
+ */
+const HEADER_MORE_LABELS = new Set(['更多操作', 'More actions'])
+
+/** 该按钮是否属于会话头部「更多操作」(⋯)（纯函数，供单测）。 */
+export function isHeaderMoreLabel(label: string | null | undefined): boolean {
+  return typeof label === 'string' && HEADER_MORE_LABELS.has(label.trim())
+}
+
+/** 「更多操作」触发器选择器（zh/en aria-label 精确值；观察器与遮蔽共用）。 */
+const HEADER_MORE_SELECTOR = ['button[aria-label="更多操作"]', 'button[aria-label="More actions"]'].join(', ')
 
 /** 侧栏会话列表行 / 搜索结果行（宿主树组件；桥接会话的标题 span 由 dsh-im 图标插件打位）。 */
 const IM_SESSION_ROW_SELECTOR = '[role="treeitem"][aria-selected], button[class*="searchResultRow"]'
@@ -254,6 +313,8 @@ const CUSTOMER_TARGET_SELECTOR = [
   COMMAND_OPTION_SELECTOR,
   WELCOME_DIALOG_SELECTOR,
   IM_SESSION_ROW_SELECTOR,
+  ACCESS_MODE_SELECTOR,
+  HEADER_MORE_SELECTOR,
 ].join(', ')
 
 /** 面板行 → 收口项 id（纯函数，供单测；非收口行返回 null）。 */
@@ -299,6 +360,19 @@ export function applyCustomerMode(root: ParentNode): boolean {
       if (!isModelCommandRow(option.textContent)) continue
       hideElement(option)
     }
+  }
+  if (maskEnabled('menuExtras')) {
+    for (const option of root.querySelectorAll(COMMAND_OPTION_SELECTOR)) {
+      if (isMenuRowExempt(option.id)) continue
+      if (isMenuKeepRow(option.textContent)) continue
+      hideElement(option)
+    }
+  }
+  if (maskEnabled('permissionChip')) {
+    for (const button of root.querySelectorAll(ACCESS_MODE_SELECTOR)) hideElement(button)
+  }
+  if (maskEnabled('headerMore')) {
+    for (const button of root.querySelectorAll(HEADER_MORE_SELECTOR)) hideElement(button)
   }
   if (maskEnabled('imSessionRows')) {
     for (const row of root.querySelectorAll(IM_SESSION_ROW_SELECTOR)) {
