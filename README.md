@@ -32,6 +32,14 @@
 
 ## 更新内容
 
+### v3.1.0-lxy.20（客户线 · 兼容 0.1.7-rc.1 / rc.2）
+
+- **HTML 交付物恢复交互预览**（2026-09-30 店主报障：pyecharts 一类交付页空白）：客户形态此前因开发者工具门关闭而降到静态档（宿主 `BasicHtmlFrame`，`sandbox=""` 拦脚本）。本版注册 **extension 优先级**的自有 HTML 预览实现（`src/client/core/html-preview.ts` + `components/HtmlLivePreview.tsx`）——`iframe sandbox="allow-scripts"` 渲染、与官方 devtools 门**解耦**；默认接管 `.html/.htm`，官方 builtin 仍在、工具条可切回
+- **「浏览器桌面 · 人工接管」自动弹层遮蔽**：收口项 `browserDesktop` 由「侧栏入口按钮」扩到「入口 + agent 自动弹层」——agent 调 `browser_open` 即自动弹出、且公网无 6080 通路；CSS 首帧（`aria-label` 前缀 zh/en）+ DOM pass（按钮 + `section[role=dialog]`）双遮，`browser_open` 能力不受影响
+- **文档预览「查看器切换」菜单收口**：预览页头候选渲染器菜单（`data-document-viewer-menu`，`candidates>1` 才渲染）整体隐藏——切官方「HTML」静态档只渲染脚本页残缺内容、「代码 / 纯文本」为开发者视角；文件按默认渲染器呈现，回退通道（下载）保留
+- 回归：`tests/brand-rebrand.test.ts` 新增 HTML 预览注册（extension 优先级 / `allow-scripts` 沙箱 / 仅客户形态）与 `documentViewerMenu` 收口判据；`config.mask.items` **20 项**
+- **注**：本版累积包含 `v3.1.0-lxy.18`（客户形态再收三处）与 `v3.1.0-lxy.19`（启动页 vendor 字样收口）；线上实例 `.17 → .20` 一并生效
+
 ### v3.1.0-lxy.19（客户线 · 兼容 0.1.7-rc.1 / rc.2）
 
 - **启动页 vendor 字样收口**（2026-09-30 店主口径：这些字**一律不显示**，下拉刷新也不能出现）：
