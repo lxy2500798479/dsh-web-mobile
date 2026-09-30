@@ -1,1 +1,1 @@
-{"version":3,"file":"brand-footer.d.ts","sourceRoot":"","sources":["../../../../src/client/effects/brand-footer.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,aAAa,EAAE,MAAM,wCAAwC,CAAA;AAI3E;;;;;;;;;;;;;GAaG;AACH,wBAAgB,kBAAkB,CAAC,GAAG,EAAE,aAAa,GAAG,IAAI,CAmB3D"}
+{"version":3,"file":"brand-footer.d.ts","sourceRoot":"","sources":["../../../../src/client/effects/brand-footer.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,aAAa,EAAE,MAAM,wCAAwC,CAAA;AAG3E;;;;;;;;;;;;;GAaG;AACH,wBAAgB,kBAAkB,CAAC,GAAG,EAAE,aAAa,GAAG,IAAI,CAmB3D"}

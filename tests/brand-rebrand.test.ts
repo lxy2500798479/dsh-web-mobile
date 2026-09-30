@@ -611,7 +611,9 @@ test('HTML 字节解码：UTF-8 容错（坏字节不抛）', () => {
 test('底部署名行：文案常量 + 注入接线（源码级守卫）', async () => {
   assert.equal(SHIBEI_SUPPORT_LINE, '拾贝启源 技术支持')
   const fx = await readFile(join(root, 'src/client/effects/brand-footer.ts'), 'utf8')
-  assert.ok(fx.includes('installMobileEffect'), '署名行必须走移动端门控（桌面 no-op 契约）')
+  assert.ok(!fx.includes('installMobileEffect'), '署名行必须**全宽度**安装（web 端 + 手机端都要有）')
+  assert.ok(fx.includes('ctx.effect('), 'missing all-width install')
+  assert.ok(fx.includes('例外'), '须在注释里登记「桌面 no-op 契约的有意例外」')
   assert.ok(fx.includes("'[class*=\"_composerStack\"]'"), '锚点必须是 composerStack')
   assert.ok(fx.includes('support-line'), 'missing support-line marker')
   assert.ok(fx.includes('SHIBEI_SUPPORT_LINE'), 'missing copy constant')

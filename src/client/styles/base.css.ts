@@ -751,17 +751,15 @@ export const BASE_CSS = `
 
 
 /* ---------- 客户形态：会话底部署名行 ----------
-   宿主 composerStack 的最后一个子节点（状态行之下），由 effects/brand-footer.ts 注入
-   （仅移动端装）。查询串与 phone-chrome 的 MOBILE_QUERY 保持一致。 */
-@media (max-width: 1023px) and (pointer: coarse) {
-  [data-mobile-nav="support-line"] {
-    text-align: center;
-    font-size: 11px;
-    line-height: 16px;
-    padding: 0 0 2px;
-    color: var(--dsw-alias-label-tertiary, #9aa0a6);
-    user-select: none;
-    -webkit-user-select: none;
-  }
+   宿主 composerStack 的最后一个子节点（状态行之下），由 effects/brand-footer.ts 注入。
+   **全宽度**（web 端 + 手机端都要显示），故不加媒体查询。 */
+[data-mobile-nav="support-line"] {
+  text-align: center;
+  font-size: 11px;
+  line-height: 16px;
+  padding: 0 0 2px;
+  color: var(--dsw-alias-label-tertiary, #9aa0a6);
+  user-select: none;
+  -webkit-user-select: none;
 }
 `
