@@ -32,11 +32,16 @@
 
 ## 更新内容
 
+### v3.1.0-lxy.22（客户线 · 兼容 0.1.7-rc.1 / rc.2）
+
+- **品牌再换（2026-09-30 晚，店主口径）：名字改「中贝智能体」、图标全部还原成「中贝」那套**——`SHIBEI_BRAND_NAME` → `中贝智能体`；`SHIBEI_LOGO_URL` 与启动页首帧文案（`BRAND_SHELL_TITLE` + `BOOT_BRAND_RULES`）同步指向 wm `/brand/zhongbei-logo.a30739cc.png`；站点图标/PWA 图标资产在 `deepseek-harness-docker`，门户/Element 文案在 `dsh-fleet`
+- **会话底部署名行**（2026-09-30 晚，店主口径）：会话**最下面**加一行「**拾贝启源 技术支持**」——注入宿主 `composerStack` 的最后一个子节点（状态行之下、贴视口底）；**移动端门控**（桌面保持移动插件 no-op 契约）；新效果模块 `effects/brand-footer.ts`（幂等 + body 观察器补齐 + 卸载清理），AGENTS 效果模块 22 → 23
+- 回归：署名行常量 / 锚点 / 入口武装 / 样式四处守卫；`config.mask.items` 保持 20 项
+
 ### v3.1.0-lxy.21（客户线 · 兼容 0.1.7-rc.1 / rc.2）
 
 - **修**：触发候选菜单收口后**残留分组标题**——命令行被收掉后，分组标题（`role="presentation" data-source=…`，与候选行是兄弟节点、宿主不包容器）会孤单留下（2026-09-30 实测：菜单只剩「文件 / 目标 / 计划」，底下还挂着「指令」两个字）。现在**整组收完连标题一起隐藏**；只要该组还有任一行可见（技能 / @ 引用来源的行不受收口，或未收的命令行），标题照常保留
 - 回归：`tests/brand-rebrand.test.ts` 新增孤儿标题判定（含「有可见行 → 标题必须留」「空组不能判孤儿」）与源码级接线守卫
-- **品牌再换（2026-09-30 晚，店主口径）：名字改「中贝智能体」、图标全部还原成「中贝」那套**——`SHIBEI_BRAND_NAME` → `中贝智能体`；`SHIBEI_LOGO_URL` 与启动页首帧文案（`BRAND_SHELL_TITLE` + `BOOT_BRAND_RULES`）同步指向 wm `/brand/zhongbei-logo.a30739cc.png`；站点图标/PWA 图标资产在 `deepseek-harness-docker`，门户/Element 文案在 `dsh-fleet`
 
 ### v3.1.0-lxy.20（客户线 · 兼容 0.1.7-rc.1 / rc.2）
 
