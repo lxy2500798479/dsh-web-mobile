@@ -356,7 +356,7 @@ const CSS_RULES_BY_ITEM: Partial<Record<MaskItemId, readonly string[]>> = {
   // 首帧（含下拉刷新重放的启动画）由 HTML 出口注入的同一套规则保证。
   bootWordmark: [
     '[data-dsh-boot] [class*="_wordmark_"] { font-size: 0 !important; }',
-    '[data-dsh-boot] [class*="_wordmark_"]::after { content: "拾贝智能体"; font-size: 16px; font-weight: 600; letter-spacing: .08em; }',
+    '[data-dsh-boot] [class*="_wordmark_"]::after { content: "中贝智能体"; font-size: 16px; font-weight: 600; letter-spacing: .08em; }',
     '[data-dsh-boot] [class*="_hint_"] { font-size: 0 !important; }',
     '[data-dsh-boot] [class*="_hint_"]::after { content: "正在加载…"; font-size: 12px; }',
   ],

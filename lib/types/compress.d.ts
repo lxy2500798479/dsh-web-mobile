@@ -1,7 +1,7 @@
 /** Vendor product title baked into the host shell HTML (`DSH_CLIENT_TITLE`). */
 export declare const HOST_SHELL_TITLE = "<title>DeepSeek Harness</title>";
 /** Branded replacement for that title. */
-export declare const BRAND_SHELL_TITLE = "<title>\u62FE\u8D1D\u667A\u80FD\u4F53</title>";
+export declare const BRAND_SHELL_TITLE = "<title>\u4E2D\u8D1D\u667A\u80FD\u4F53</title>";
 /** Marker that identifies the host shell HTML (vs any other text/html body). */
 export declare const SHELL_HTML_MARKER = "<title>DeepSeek Harness</title>";
 /**

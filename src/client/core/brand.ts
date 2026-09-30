@@ -1,4 +1,4 @@
-// brand.ts — 拾贝智能体品牌常量与判据（品牌位占位与首屏文案替换共用）。
+// brand.ts — 中贝智能体品牌常量与判据（品牌位占位与首屏文案替换共用）。
 // 零 DOM、零运行时 import：node --test 可直跑（type-stripping）。
 //
 // 品牌机制（2026-09-28）：
@@ -11,14 +11,14 @@
 //   只能做 DOM 替换，见 effects/brand-headline.ts。
 //
 // 品牌名史：拾贝起源点智成金（2026-09-28）→ 中贝通信（2026-09-30）→
-// 拾贝智能体（2026-09-30，本值）。图形同步换回拾贝（2026-09-30 翻案）。
+// 拾贝智能体（2026-09-30 白天）→ 中贝智能体（2026-09-30 晚，本值；图形一并还原成「中贝」那套）。
 
 /** 拾贝品牌图形（wm 静态资产，文件名带内容哈希；2026-09-30 由中贝新标换回拾贝）。 */
 export const SHIBEI_LOGO_URL =
-  'https://wm.10rig.com:8443/brand/shibei-logo.7d99f0bc.png'
+  'https://wm.10rig.com:8443/brand/zhongbei-logo.a30739cc.png'
 
-/** 品牌文案（首屏 headline 与侧栏品牌名共用）。2026-09-30 由「中贝通信」改为「拾贝智能体」。 */
-export const SHIBEI_BRAND_NAME = '拾贝智能体'
+/** 品牌文案（首屏 headline 与侧栏品牌名共用）。2026-09-30 晚定为「中贝智能体」。 */
+export const SHIBEI_BRAND_NAME = '中贝智能体'
 
 /** 宿主首屏标语的已知原文（zh / en 两套字典的 hero.headline）。 */
 export const HOST_HERO_HEADLINES: readonly string[] = ['探索未至之境', 'Into the Unknown']

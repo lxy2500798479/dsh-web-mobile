@@ -50,7 +50,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 export const HOST_SHELL_TITLE = '<title>DeepSeek Harness</title>'
 
 /** Branded replacement for that title. */
-export const BRAND_SHELL_TITLE = '<title>拾贝智能体</title>'
+export const BRAND_SHELL_TITLE = '<title>中贝智能体</title>'
 
 /** Marker that identifies the host shell HTML (vs any other text/html body). */
 export const SHELL_HTML_MARKER = HOST_SHELL_TITLE
@@ -68,7 +68,7 @@ export const SHELL_HTML_MARKER = HOST_SHELL_TITLE
  */
 export const BOOT_BRAND_RULES: readonly string[] = [
   '[data-dsh-boot] [class*="_wordmark_"] { font-size: 0 !important; }',
-  '[data-dsh-boot] [class*="_wordmark_"]::after { content: "拾贝智能体"; font-size: 16px; font-weight: 600; letter-spacing: .08em; }',
+  '[data-dsh-boot] [class*="_wordmark_"]::after { content: "中贝智能体"; font-size: 16px; font-weight: 600; letter-spacing: .08em; }',
   '[data-dsh-boot] [class*="_hint_"] { font-size: 0 !important; }',
   '[data-dsh-boot] [class*="_hint_"]::after { content: "正在加载…"; font-size: 12px; }',
 ]

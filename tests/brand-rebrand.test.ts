@@ -1,4 +1,4 @@
-// 品牌改造回归（2026-09-28 起；文案 2026-09-30 换「拾贝智能体」）：
+// 品牌改造回归（2026-09-28 起；文案 2026-09-30 晚定为「中贝智能体」，图形为「中贝」那套）：
 // 常量形状、首屏标语判据（精确匹配、不误伤聊天内容），以及 index.tsx 里三个品牌位
 // 注册的存在性（源码级守卫——slot 名拼错的失败模式是静默回退到官方鱼标）。
 // 2026-09-29 追加：客户形态控件遮蔽守卫（deployment-mode 的「浏览器桌面」指纹 +
@@ -84,10 +84,10 @@ test('预览徽标判据：只认宿主原文（zh/en），精确匹配、容忍
 })
 
 test('品牌常量：文案与 logo URL 形状', () => {
-  assert.equal(SHIBEI_BRAND_NAME, '拾贝智能体')
+  assert.equal(SHIBEI_BRAND_NAME, '中贝智能体')
   assert.match(
     SHIBEI_LOGO_URL,
-    /^https:\/\/wm\.10rig\.com:8443\/brand\/shibei-logo\.[0-9a-f]+\.png$/,
+    /^https:\/\/wm\.10rig\.com:8443\/brand\/zhongbei-logo\.[0-9a-f]+\.png$/,
   )
 })
 

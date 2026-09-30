@@ -36,6 +36,7 @@
 
 - **修**：触发候选菜单收口后**残留分组标题**——命令行被收掉后，分组标题（`role="presentation" data-source=…`，与候选行是兄弟节点、宿主不包容器）会孤单留下（2026-09-30 实测：菜单只剩「文件 / 目标 / 计划」，底下还挂着「指令」两个字）。现在**整组收完连标题一起隐藏**；只要该组还有任一行可见（技能 / @ 引用来源的行不受收口，或未收的命令行），标题照常保留
 - 回归：`tests/brand-rebrand.test.ts` 新增孤儿标题判定（含「有可见行 → 标题必须留」「空组不能判孤儿」）与源码级接线守卫
+- **品牌再换（2026-09-30 晚，店主口径）：名字改「中贝智能体」、图标全部还原成「中贝」那套**——`SHIBEI_BRAND_NAME` → `中贝智能体`；`SHIBEI_LOGO_URL` 与启动页首帧文案（`BRAND_SHELL_TITLE` + `BOOT_BRAND_RULES`）同步指向 wm `/brand/zhongbei-logo.a30739cc.png`；站点图标/PWA 图标资产在 `deepseek-harness-docker`，门户/Element 文案在 `dsh-fleet`
 
 ### v3.1.0-lxy.20（客户线 · 兼容 0.1.7-rc.1 / rc.2）
 

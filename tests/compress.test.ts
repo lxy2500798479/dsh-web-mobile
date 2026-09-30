@@ -157,7 +157,7 @@ test('patchShellHtml：title 换品牌 + 注入首帧品牌 CSS；非 shell 逐�
   const shell = '<!doctype html><html><head><title>DeepSeek Harness</title></head><body><div id="root"></div></body></html>'
   const out = patchShellHtml(shell)
   assert.equal(out.includes(SHELL_HTML_MARKER), false, 'vendor 标题必须被换掉')
-  assert.ok(out.includes('<title>拾贝智能体</title>'))
+  assert.ok(out.includes('<title>中贝智能体</title>'))
   assert.ok(out.includes(BOOT_BRAND_STYLE), '首帧品牌样式必须注入')
   assert.ok(out.indexOf(BOOT_BRAND_STYLE) < out.indexOf('</head>'), '注入必须在 </head> 之前（首帧即生效）')
   // 每条规则都在注入的样式里（与客户端兜底同文）
@@ -189,7 +189,7 @@ test('HTML 出口改写走通真实响应管线：body 被改写且 Content-Leng
       }).on('error', reject)
     })
     const patched = await get('/shell')
-    assert.ok(patched.body.includes('拾贝智能体'))
+    assert.ok(patched.body.includes('中贝智能体'))
     assert.equal(patched.body.includes('DeepSeek Harness'), false)
     assert.equal(Number(patched.headers['content-length']), Buffer.byteLength(patched.body), 'Content-Length 必须与改写后的 body 对齐')
     assert.equal(patched.headers['content-encoding'], undefined, 'shell HTML 不压缩')
