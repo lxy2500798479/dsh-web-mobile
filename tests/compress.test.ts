@@ -1,6 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { headerValue, isDeferrable, varyWithAcceptEncoding } from '../src/compress.ts'
+import { headerValue, isDeferrable, isShellDeferrable, varyWithAcceptEncoding } from '../src/compress.ts'
+import { BOOT_BRAND_RULES, HOST_SHELL_TITLE } from '../src/compress.ts'
 
 test('headerValue finds keys regardless of casing', () => {
   assert.equal(headerValue({ 'Content-Type': 'application/json' }, 'content-type'), 'application/json')
@@ -140,5 +141,62 @@ test('buffered strings honor the write()/end() encoding, e.g. latin1 (issue #80)
   } finally {
     server.close()
     restore()
+  }
+})
+
+test('isShellDeferrable 只认 text/html，已编码响应不碰', () => {
+  assert.equal(isShellDeferrable({ 'content-type': 'text/html' }), true)
+  assert.equal(isShellDeferrable({ 'Content-Type': 'text/html; charset=utf-8' }), true)
+  assert.equal(isShellDeferrable({ 'content-type': 'application/json' }), false)
+  assert.equal(isShellDeferrable({ 'content-type': 'text/html', 'content-encoding': 'gzip' }), false)
+  assert.equal(isShellDeferrable({}), false)
+})
+
+test('patchShellHtml：title 换品牌 + 注入首帧品牌 CSS；非 shell 逐字节不变', async () => {
+  const { patchShellHtml, BOOT_BRAND_STYLE, SHELL_HTML_MARKER } = await import('../src/compress.ts')
+  const shell = '<!doctype html><html><head><title>DeepSeek Harness</title></head><body><div id="root"></div></body></html>'
+  const out = patchShellHtml(shell)
+  assert.equal(out.includes(SHELL_HTML_MARKER), false, 'vendor 标题必须被换掉')
+  assert.ok(out.includes('<title>拾贝智能体</title>'))
+  assert.ok(out.includes(BOOT_BRAND_STYLE), '首帧品牌样式必须注入')
+  assert.ok(out.indexOf(BOOT_BRAND_STYLE) < out.indexOf('</head>'), '注入必须在 </head> 之前（首帧即生效）')
+  // 每条规则都在注入的样式里（与客户端兜底同文）
+  for (const rule of BOOT_BRAND_RULES) assert.ok(BOOT_BRAND_STYLE.includes(rule), `缺规则: ${rule}`)
+  // 非 shell HTML：原样返回（字节级）
+  const other = '<!doctype html><html><body>error page</body></html>'
+  assert.equal(patchShellHtml(other), other)
+})
+
+test('HTML 出口改写走通真实响应管线：body 被改写且 Content-Length 对齐', async () => {
+  const { installResponseCompression } = await import('../src/compress.ts')
+  const http = await import('node:http')
+  const restore = installResponseCompression()
+  const shell = '<!doctype html><html><head><title>DeepSeek Harness</title></head><body><div id="root"></div></body></html>'
+  const plain = '<!doctype html><html><head><title>Other</title></head><body>x</body></html>'
+  const server = http.createServer((req, res) => {
+    const body = req.url === '/shell' ? shell : plain
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Content-Length': Buffer.byteLength(body) })
+    res.end(body)
+  })
+  try {
+    await new Promise<void>((resolveListen) => server.listen(0, resolveListen))
+    const port = (server.address() as { port: number }).port
+    const get = (path: string) => new Promise<{ headers: Record<string, string | string[]>, body: string }>((resolve, reject) => {
+      http.get({ host: '127.0.0.1', port, path }, (res) => {
+        const chunks: Buffer[] = []
+        res.on('data', (c: Buffer) => chunks.push(c))
+        res.on('end', () => resolve({ headers: res.headers, body: Buffer.concat(chunks).toString('utf8') }))
+      }).on('error', reject)
+    })
+    const patched = await get('/shell')
+    assert.ok(patched.body.includes('拾贝智能体'))
+    assert.equal(patched.body.includes('DeepSeek Harness'), false)
+    assert.equal(Number(patched.headers['content-length']), Buffer.byteLength(patched.body), 'Content-Length 必须与改写后的 body 对齐')
+    assert.equal(patched.headers['content-encoding'], undefined, 'shell HTML 不压缩')
+    const untouched = await get('/plain')
+    assert.equal(untouched.body, plain, '非 shell HTML 逐字节不变')
+  } finally {
+    restore()
+    await new Promise<void>((resolveClose) => server.close(() => { resolveClose() }))
   }
 })

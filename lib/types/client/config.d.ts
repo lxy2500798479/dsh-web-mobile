@@ -32,6 +32,10 @@
  *  - headerMore       会话头部右上角「更多操作」(⋯) 按钮（宿主 session-log-export 的
  *                     `header.more`；点开只有「下载 Session 日志 / 反馈」两项，客户形态不露出
  *                     ——2026-09-30 店主口径）
+ *  - bootWordmark     启动页（宿主 BootPage）的 vendor 字样：wordmark `HARNESS` → 品牌名、
+ *                     提示 `Loading plugins…` → 中文（2026-09-30 店主口径：这些字一律不显示，
+ *                     下拉刷新也不能出现）。**首帧零闪烁由宿主半区在 HTML 出口注入同规则 CSS
+ *                     保证**（宿主半区 compress.ts 的 shell-branding 段），此项是客户端兜底（插件加载后同规则生效）。
  *
  * 设计取舍（2026-09-29 开关化，店主口径「开关是代码层面的，不是配置到界面」）：
  * 一个总开关 + 每项一个配置；引擎（effects/deployment-mode.ts、index.tsx 座位注册）
@@ -65,6 +69,7 @@ export declare const config: {
             readonly menuExtras: true;
             readonly permissionChip: true;
             readonly headerMore: true;
+            readonly bootWordmark: true;
         };
     };
 };

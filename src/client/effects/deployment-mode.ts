@@ -81,6 +81,7 @@ export const MASK_ITEM_TITLES: Record<MaskItemId, string> = {
   menuExtras: '触发候选菜单里「文件 / 目标 / 计划」以外的命令行',
   permissionChip: 'composer 权限胶囊（访问模式）',
   headerMore: '会话头部「更多操作」(⋯) 按钮（下载 Session 日志 / 反馈）',
+  bootWordmark: '启动页 vendor 字样（HARNESS / Loading plugins… → 品牌）',
 }
 
 /** 需要 DOM pass（含观察器重放）的收口项；全关时整段不安装。 */
@@ -279,6 +280,16 @@ const CSS_RULES_BY_ITEM: Partial<Record<MaskItemId, readonly string[]>> = {
   imSessionRows: [
     '[role="treeitem"]:has([data-dsh-im-session-channel]) { display: none !important; }',
     'button[class*="searchResultRow"]:has([data-dsh-im-session-channel]) { display: none !important; }',
+  ],
+  // 启动页（宿主 BootPage，`[data-dsh-boot]`）的 vendor 字样：wordmark `HARNESS` 与提示
+  // `Loading plugins…` 一律不显示，改显品牌。规则与宿主半区的首帧注入（compress.ts 的 shell-branding 段
+  // 的 BOOT_BRAND_STYLE）必须逐条一致——守卫测试对账两处。这里只管插件加载后的兜底；
+  // 首帧（含下拉刷新重放的启动画）由 HTML 出口注入的同一套规则保证。
+  bootWordmark: [
+    '[data-dsh-boot] [class*="_wordmark_"] { font-size: 0 !important; }',
+    '[data-dsh-boot] [class*="_wordmark_"]::after { content: "拾贝智能体"; font-size: 16px; font-weight: 600; letter-spacing: .08em; }',
+    '[data-dsh-boot] [class*="_hint_"] { font-size: 0 !important; }',
+    '[data-dsh-boot] [class*="_hint_"]::after { content: "正在加载…"; font-size: 12px; }',
   ],
 }
 

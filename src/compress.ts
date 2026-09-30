@@ -10,8 +10,13 @@
  * - The client's `Accept-Encoding` picks the codec: `br` (brotli, quality 6)
  *   preferred, `gzip` fallback.
  * - Only JSON responses of at least MIN_JSON_BYTES are compressed; small
- *   JSON and every other content type (HTML, static assets, ZIP, SSE streams)
- *   pass through byte-identical with the original headers.
+ *   JSON, static assets, ZIP and SSE streams pass through byte-identical with
+ *   the original headers.
+ * - `text/html` is deferred for the SHELL BRANDING rewrite instead
+ *   (the shell-branding section below): the shell's vendor `<title>` is branded and the
+ *   first-paint brand CSS is injected so the kernel boot page never shows
+ *   vendor copy — not even for one frame. Any other HTML (and a shell whose
+ *   markers are absent, e.g. after a host upgrade) passes through unchanged.
  * - The response header write is deferred until the body is known, so the
  *   decision (compress or not) is made on the actual size, and `Content-Length`
  *   always matches what is sent. Non-JSON responses call the original
@@ -33,25 +38,92 @@ import { brotliCompressSync, constants as zlibConstants, gzipSync } from 'node:z
 import { ServerResponse as NodeServerResponse } from 'node:http'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 
+// ============================================================================
+// Shell-HTML branding rewrite (see the module doc's text/html bullet).
+// The host shell HTML carries the baked vendor `<title>`, and its kernel boot page
+// paints BEFORE any client plugin loads — a client-side override always leaves a
+// first-paint flash. Rewriting the HTML on the wire removes it, and covers
+// pull-to-refresh too (same boot paint, replayed).
+// ============================================================================
+
+/** Vendor product title baked into the host shell HTML (`DSH_CLIENT_TITLE`). */
+export const HOST_SHELL_TITLE = '<title>DeepSeek Harness</title>'
+
+/** Branded replacement for that title. */
+export const BRAND_SHELL_TITLE = '<title>拾贝智能体</title>'
+
+/** Marker that identifies the host shell HTML (vs any other text/html body). */
+export const SHELL_HTML_MARKER = HOST_SHELL_TITLE
+
+/**
+ * First-paint branding CSS. Selectors are scoped to the kernel boot page
+ * (`[data-dsh-boot]`) and match the boot page's hashed class stems by
+ * substring (`_wordmark_` / `_hint_`), per this repo's hashed-class rule.
+ * `font-size: 0` hides the vendor text; `::after` supplies the brand copy.
+ */
+/**
+ * Rule texts, verbatim-shared with the client fallback
+ * (`deployment-mode.ts` → `CSS_RULES_BY_ITEM.bootWordmark`). The guard test
+ * asserts both sides carry these exact strings — keep them in one shape.
+ */
+export const BOOT_BRAND_RULES: readonly string[] = [
+  '[data-dsh-boot] [class*="_wordmark_"] { font-size: 0 !important; }',
+  '[data-dsh-boot] [class*="_wordmark_"]::after { content: "拾贝智能体"; font-size: 16px; font-weight: 600; letter-spacing: .08em; }',
+  '[data-dsh-boot] [class*="_hint_"] { font-size: 0 !important; }',
+  '[data-dsh-boot] [class*="_hint_"]::after { content: "正在加载…"; font-size: 12px; }',
+]
+
+/** First-paint `<style>` tag injected into the shell HTML head. */
+export const BOOT_BRAND_STYLE = '<style data-mobile-nav="boot-brand">' + BOOT_BRAND_RULES.join('') + '</style>'
+
+/** Whether this text/html body is the host shell (carries the vendor title). */
+export function isShellHtml(html: string): boolean {
+  return html.includes(SHELL_HTML_MARKER)
+}
+
+/**
+ * Rewrite the host shell HTML: brand the title and inject the first-paint CSS.
+ * Returns the input unchanged (byte-identical) when it is not the host shell.
+ * @param html - Raw shell HTML body.
+ * @returns Patched HTML, or the original string when there is nothing to do.
+ */
+export function patchShellHtml(html: string): string {
+  if (!isShellHtml(html)) return html
+  let next = html.split(HOST_SHELL_TITLE).join(BRAND_SHELL_TITLE)
+  // Inject before the first `</head>` so the rules are live from first paint.
+  const headEnd = next.indexOf('</head>')
+  if (headEnd !== -1) {
+    next = next.slice(0, headEnd) + BOOT_BRAND_STYLE + next.slice(headEnd)
+  }
+  return next
+}
+
 /** Only payloads at least this large are worth compressing. */
 const MIN_JSON_BYTES = 4 * 1024
 
 /** Brotli quality: 6 balances size and CPU for large JSON (17MB → ~1MB). */
 const BROTLI_QUALITY = 6
 
-/** One deferred response: headers held back until the body size is known. */
-interface DeferredResponse {
+/** Fields shared by every deferred response (headers held until end()). */
+interface DeferredCommon {
   /** Original writeHead argument list (status/message/headers) to replay. */
   writeHeadArgs: unknown[]
   /** Original headers object carried by writeHeadArgs. */
   headers: Record<string, string | number | string[]>
-  /** Codec chosen from the request's Accept-Encoding. */
-  encoding: 'br' | 'gzip'
   /** Buffered body chunks. */
   chunks: Buffer[]
   /** write() completion callbacks buffered during deferral. */
   writeCallbacks: Array<() => void>
 }
+
+/**
+ * One deferred response: headers held back until the body size is known.
+ * Discriminated on `kind` so the JSON branch keeps a non-null codec while the
+ * shell-HTML branch (never compressed) carries `null`.
+ */
+type DeferredResponse =
+  | (DeferredCommon & { kind: 'json', encoding: 'br' | 'gzip' })
+  | (DeferredCommon & { kind: 'html', encoding: null })
 
 /** Per-response state; only present while a JSON response is being deferred. */
 const deferred = new WeakMap<ServerResponse, DeferredResponse>()
@@ -82,6 +154,17 @@ export function isDeferrable(headers: Record<string, string | number | string[]>
   if (headerValue(headers, 'content-encoding') !== undefined) return false
   const contentType = headerValue(headers, 'content-type') ?? ''
   return contentType.includes('json')
+}
+
+/**
+ * Whether a response carries the shell HTML (branding rewrite at end()).
+ * Mirrors {@link isDeferrable} for `text/html`; the body marker decides
+ * whether anything is actually rewritten, so non-shell HTML passes through
+ * byte-identical.
+ */
+export function isShellDeferrable(headers: Record<string, string | number | string[]>): boolean {
+  if (headerValue(headers, 'content-encoding') !== undefined) return false
+  return (headerValue(headers, 'content-type') ?? '').includes('text/html')
 }
 
 /** Append the Accept-Encoding Vary token without clobbering an existing Vary. */
@@ -131,7 +214,15 @@ export function installResponseCompression(): () => void {
   function patchedWriteHead(this: ServerResponse, ...args: unknown[]): ServerResponse {
     const rawHeaders = typeof args[1] === 'string' ? args[2] : args[1]
     const headers = rawHeaders as Record<string, string | number | string[]> | undefined
-    if (headers === undefined || !isDeferrable(headers)) {
+    if (headers === undefined) {
+      return origWriteHead.apply(this, args as never) as ServerResponse
+    }
+    // Shell HTML is rewritten (never compressed) and needs no Accept-Encoding.
+    if (isShellDeferrable(headers)) {
+      deferred.set(this, { kind: 'html', writeHeadArgs: args, headers, encoding: null, chunks: [], writeCallbacks: [] })
+      return this
+    }
+    if (!isDeferrable(headers)) {
       return origWriteHead.apply(this, args as never) as ServerResponse
     }
     const encoding = pickEncoding(this)
@@ -139,7 +230,7 @@ export function installResponseCompression(): () => void {
       return origWriteHead.apply(this, args as never) as ServerResponse
     }
     // Hold the header write until the body size is known (see module doc).
-    deferred.set(this, { writeHeadArgs: args, headers, encoding, chunks: [], writeCallbacks: [] })
+    deferred.set(this, { kind: 'json', writeHeadArgs: args, headers, encoding, chunks: [], writeCallbacks: [] })
     return this
   }
 
@@ -176,6 +267,31 @@ export function installResponseCompression(): () => void {
     // the compressed payload (issue #78).
     if (chunk !== undefined && typeof chunk !== 'function') bufferChunk(pending, chunk, typeof rest[0] === 'string' ? rest[0] : undefined)
     const body = Buffer.concat(pending.chunks)
+
+    // Shell HTML: rewrite the vendor title + inject the first-paint brand CSS
+    // (see the shell-branding section). Non-shell HTML comes back byte-identical.
+    if (pending.kind === 'html') {
+      const original = body.toString('utf8')
+      const patched = patchShellHtml(original)
+      if (patched === original) {
+        writeHeadWith(this, origWriteHead, pending, pending.headers)
+        const ended = body.byteLength === 0
+          ? origEnd.apply(this, callbacks as never) as ServerResponse
+          : origEnd.apply(this, [body, ...callbacks] as never) as ServerResponse
+        fireWriteCallbacks(pending)
+        return ended
+      }
+      const out = Buffer.from(patched, 'utf8')
+      const headers = { ...pending.headers }
+      for (const key of Object.keys(headers)) {
+        if (key.toLowerCase() === 'content-length') delete headers[key]
+      }
+      headers['content-length'] = out.byteLength
+      writeHeadWith(this, origWriteHead, pending, headers)
+      const ended = origEnd.apply(this, [out, ...callbacks] as never) as ServerResponse
+      fireWriteCallbacks(pending)
+      return ended
+    }
 
     // Small or empty JSON: replay the ORIGINAL header write and body verbatim
     // (no Content-Encoding, original Content-Length intact).

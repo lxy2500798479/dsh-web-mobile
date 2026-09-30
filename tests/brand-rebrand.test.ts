@@ -40,6 +40,7 @@ import {
   panelRowMaskId,
 } from '../src/client/effects/deployment-mode.ts'
 import { config, maskEnabled } from '../src/client/config.ts'
+import { BOOT_BRAND_RULES } from '../src/compress.ts'
 import {
   accountDisplayName,
   accountLocalpart,
@@ -278,8 +279,8 @@ test('界面收口开关：总开关 + 每项一配置，默认全遮（行为�
   )
   assert.equal(
     ids.length,
-    18,
-    '收口项共 18 项（最新三项：菜单命令行收口 / composer 权限胶囊 / 头部「更多操作」）',
+    19,
+    '收口项共 19 项（最新四项：菜单命令行 / composer 权限胶囊 / 头部「更多操作」/ 启动页 vendor 字样）',
   )
   for (const id of ids) {
     assert.equal(
@@ -294,6 +295,21 @@ test('界面收口开关：总开关 + 每项一配置，默认全遮（行为�
   assert.equal(maskEnabled('menuExtras'), true)
   assert.equal(maskEnabled('permissionChip'), true)
   assert.equal(maskEnabled('headerMore'), true)
+  assert.equal(maskEnabled('bootWordmark'), true)
+})
+
+test('启动页 vendor 字样收口：客户端兜底规则与宿主半区首帧注入逐条一致', async () => {
+  assert.ok(BOOT_BRAND_RULES.length >= 4, '首帧注入规则数不应退化')
+  for (const rule of BOOT_BRAND_RULES) {
+    assert.ok(rule.includes('[data-dsh-boot]'), `规则必须锚定启动页: ${rule}`)
+  }
+  // 客户端兜底（CSS_RULES_BY_ITEM.bootWordmark）与宿主半区（BOOT_BRAND_RULES）同文——
+  // 两侧漂移会让「插件加载后」与「首帧」表现不一致。
+  const source = await readFile(join(root, 'src/client/effects/deployment-mode.ts'), 'utf8')
+  assert.ok(source.includes('bootWordmark'), 'missing bootWordmark wiring')
+  for (const rule of BOOT_BRAND_RULES) {
+    assert.ok(source.includes(rule), `客户端兜底缺同文规则: ${rule}`)
+  }
 })
 
 test('内测声明弹窗指纹：命中 zh/en，普通对话框不误伤', async () => {
