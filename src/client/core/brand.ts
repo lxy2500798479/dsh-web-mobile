@@ -11,12 +11,11 @@
 //   只能做 DOM 替换，见 effects/brand-headline.ts。
 //
 // 品牌名史：拾贝起源点智成金（2026-09-28）→ 中贝通信（2026-09-30）→
-// 拾贝智能体（2026-09-30，本值）。只改文案不改图形时，logo 常量与 wm 静态资产
-// 一并保持即可。
+// 拾贝智能体（2026-09-30，本值）。图形同步换回拾贝（2026-09-30 翻案）。
 
-/** 中贝通信品牌图形（wm 静态资产，文件名带内容哈希；2026-09-29 换新标，原 maas-test 拾贝图退役）。 */
+/** 拾贝品牌图形（wm 静态资产，文件名带内容哈希；2026-09-30 由中贝新标换回拾贝）。 */
 export const SHIBEI_LOGO_URL =
-  'https://wm.10rig.com:8443/brand/zhongbei-logo.a30739cc.png'
+  'https://wm.10rig.com:8443/brand/shibei-logo.7d99f0bc.png'
 
 /** 品牌文案（首屏 headline 与侧栏品牌名共用）。2026-09-30 由「中贝通信」改为「拾贝智能体」。 */
 export const SHIBEI_BRAND_NAME = '拾贝智能体'

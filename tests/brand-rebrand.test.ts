@@ -74,7 +74,7 @@ test('品牌常量：文案与 logo URL 形状', () => {
   assert.equal(SHIBEI_BRAND_NAME, '拾贝智能体')
   assert.match(
     SHIBEI_LOGO_URL,
-    /^https:\/\/wm\.10rig\.com:8443\/brand\/zhongbei-logo\.[0-9a-f]+\.png$/,
+    /^https:\/\/wm\.10rig\.com:8443\/brand\/shibei-logo\.[0-9a-f]+\.png$/,
   )
 })
 

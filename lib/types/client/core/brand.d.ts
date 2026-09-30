@@ -1,5 +1,5 @@
-/** 中贝通信品牌图形（wm 静态资产，文件名带内容哈希；2026-09-29 换新标，原 maas-test 拾贝图退役）。 */
-export declare const SHIBEI_LOGO_URL = "https://wm.10rig.com:8443/brand/zhongbei-logo.a30739cc.png";
+/** 拾贝品牌图形（wm 静态资产，文件名带内容哈希；2026-09-30 由中贝新标换回拾贝）。 */
+export declare const SHIBEI_LOGO_URL = "https://wm.10rig.com:8443/brand/shibei-logo.7d99f0bc.png";
 /** 品牌文案（首屏 headline 与侧栏品牌名共用）。2026-09-30 由「中贝通信」改为「拾贝智能体」。 */
 export declare const SHIBEI_BRAND_NAME = "\u62FE\u8D1D\u667A\u80FD\u4F53";
 /** 宿主首屏标语的已知原文（zh / en 两套字典的 hero.headline）。 */
