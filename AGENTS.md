@@ -25,7 +25,7 @@
   │     ├─ components/       ← MobileNavToggle / MobileDrawerFooter / ComposerFileButton / FileDownloadButton.tsx（下载·页头/空态）/ DeliverableDownloadButton.tsx（下载·交付卡片）/ HtmlLivePreview.tsx（HTML 交互预览）/ open-files-panel.ts / ShibeiBrand.tsx（3 品牌位）/ ModelSeatHidden.tsx（模型座位遮蔽）/ AccountCard.tsx（账号行·退出登录）
   │     ├─ config.ts         ← 界面收口开关（mask.master 总开关 + mask.items 20 项逐项；默认全遮）
   │     ├─ core/             ← reconciler-core.ts（零 import）+ raf-scheduler.ts · css-rules.ts · sessions-compat.ts · layout-compat.ts · icon-compat.ts（宿主图标跨代命名兼容）· html-preview.ts（HTML 交互预览注册数据）
-  │     ├─ effects/          ← 22 个效果模块：phone-chrome · sidebar-swipe ·
+  │     ├─ effects/          ← 23 个效果模块：phone-chrome · sidebar-swipe ·
   │     │                       gesture-guard · subagent-chip-touch · composer-keyboard-guard ·
   │     │                       shortcut-modal-keyboard-guard ·
   │     │                       composer-plus-toggle · workspace-chip-toggle · team-chip-toggle ·
@@ -33,7 +33,7 @@
   │     │                       file-viewer-compat · aionui-compat · stats-line ·
   │     │                       preview-fullscreen ·
   │     │                       overlay-backdrop-fab · panel-exit · session-menu · session-row-fiber ·
-  │     │                       brand-headline · brand-title · html-preview（HTML 交互预览） ·
+  │     │                       brand-headline · brand-title · brand-footer（底部署名行）· html-preview（HTML 交互预览） ·
   │     │                       deployment-mode（客户形态收口）
   │     ├─ styles/           ← index.ts（base→layout→compat→misc 承载顺序）+ 4 个 .css.ts
   │     └─ i18n/locales.ts

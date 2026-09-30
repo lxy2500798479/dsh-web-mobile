@@ -20,6 +20,12 @@ export const SHIBEI_LOGO_URL =
 /** 品牌文案（首屏 headline 与侧栏品牌名共用）。2026-09-30 晚定为「中贝智能体」。 */
 export const SHIBEI_BRAND_NAME = '中贝智能体'
 
+/**
+ * 会话底部署名行（2026-09-30 店主口径）：客户形态在会话最下面显示「拾贝起源 技术支持」。
+ * 由 effects/brand-footer.ts 注入到 composerStack 末尾（状态行之下）。
+ */
+export const SHIBEI_SUPPORT_LINE = '拾贝起源 技术支持'
+
 /** 宿主首屏标语的已知原文（zh / en 两套字典的 hero.headline）。 */
 export const HOST_HERO_HEADLINES: readonly string[] = ['探索未至之境', 'Into the Unknown']
 

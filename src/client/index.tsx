@@ -23,6 +23,7 @@ import { installShortcutModalKeyboardGuard } from './effects/shortcut-modal-keyb
 import { installAionuiCompat } from './effects/aionui-compat.ts'
 import { installBrandHeadline } from './effects/brand-headline.ts'
 import { installBrandFavicon, installBrandTitle } from './effects/brand-title.ts'
+import { installBrandFooter } from './effects/brand-footer.ts'
 import { installAutoReload, installDeploymentMode } from './effects/deployment-mode.ts'
 import { installHtmlPreview } from './effects/html-preview.ts'
 import { maskEnabled } from './config.ts'
@@ -266,6 +267,9 @@ export function apply(ctx: ClientContext): void {
   // 中贝通信换牌：浏览器标签图标（favicon）的 DOM 覆盖（宿主 shell HTML 写死两个
   // SVG link，不入 slot 系统；机制与边界见文件头）。
   installBrandFavicon(ctx)
+
+  // 会话底部署名行（客户形态，移动端）：宿主没有底部 slot，注入 composerStack 末尾。
+  installBrandFooter(ctx)
 
   // 部署形态（config.ts 的 mask 开关：总开关 + 逐项）：客户态收 轨迹/设置/浏览器/插件/模型座位 等入口，
   // 开发态全开。（轨迹/代码差异/预设切换走宿主官方 developerTools 门，见文件头。）

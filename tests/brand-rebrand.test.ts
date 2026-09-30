@@ -42,6 +42,7 @@ import {
 } from '../src/client/effects/deployment-mode.ts'
 import { config, maskEnabled } from '../src/client/config.ts'
 import { BOOT_BRAND_RULES } from '../src/compress.ts'
+import { SHIBEI_SUPPORT_LINE } from '../src/client/core/brand.ts'
 import {
   accountDisplayName,
   accountLocalpart,
@@ -605,4 +606,17 @@ test('交互预览语言判定：zh 主、en 兜底、未知取中文', () => {
 test('HTML 字节解码：UTF-8 容错（坏字节不抛）', () => {
   assert.equal(decodeHtmlBytes(new TextEncoder().encode('<p>你好</p>')), '<p>你好</p>')
   assert.ok(decodeHtmlBytes(new Uint8Array([0xe4, 0xbd])).length > 0)
+})
+
+test('底部署名行：文案常量 + 注入接线（源码级守卫）', async () => {
+  assert.equal(SHIBEI_SUPPORT_LINE, '拾贝起源 技术支持')
+  const fx = await readFile(join(root, 'src/client/effects/brand-footer.ts'), 'utf8')
+  assert.ok(fx.includes('installMobileEffect'), '署名行必须走移动端门控（桌面 no-op 契约）')
+  assert.ok(fx.includes("'[class*=\"_composerStack\"]'"), '锚点必须是 composerStack')
+  assert.ok(fx.includes('support-line'), 'missing support-line marker')
+  assert.ok(fx.includes('SHIBEI_SUPPORT_LINE'), 'missing copy constant')
+  const entry = await readFile(join(root, 'src/client/index.tsx'), 'utf8')
+  assert.ok(entry.includes('installBrandFooter(ctx)'), '入口未武装该效果')
+  const css = await readFile(join(root, 'src/client/styles/base.css.ts'), 'utf8')
+  assert.ok(css.includes('[data-mobile-nav="support-line"]'), 'missing support-line styles')
 })
