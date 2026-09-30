@@ -3,10 +3,10 @@ export declare const SHIBEI_LOGO_URL = "https://wm.10rig.com:8443/brand/zhongbei
 /** 品牌文案（首屏 headline 与侧栏品牌名共用）。2026-09-30 晚定为「中贝智能体」。 */
 export declare const SHIBEI_BRAND_NAME = "\u4E2D\u8D1D\u667A\u80FD\u4F53";
 /**
- * 会话底部署名行（2026-09-30 店主口径）：客户形态在会话最下面显示「拾贝启源 技术支持」。
+ * 会话底部署名行（2026-09-30 店主口径）：客户形态在会话最下面显示「拾贝启源」。
  * 由 effects/brand-footer.ts 注入到 composerStack 末尾（状态行之下）。
  */
-export declare const SHIBEI_SUPPORT_LINE = "\u62FE\u8D1D\u542F\u6E90 \u6280\u672F\u652F\u6301";
+export declare const SHIBEI_SUPPORT_LINE = "\u62FE\u8D1D\u542F\u6E90";
 /** 宿主首屏标语的已知原文（zh / en 两套字典的 hero.headline）。 */
 export declare const HOST_HERO_HEADLINES: readonly string[];
 /** 宿主首屏「预览版」徽标的已知文案（zh / en 两套字典的 hero.preview）。 */

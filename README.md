@@ -32,6 +32,10 @@
 
 ## 更新内容
 
+### v3.1.0-lxy.23（客户线 · 兼容 0.1.7-rc.1 / rc.2）
+
+- **底部署名行文案**：「拾贝启源 技术支持」→ **「拾贝启源」**（2026-09-30 店主口径：就这几个字）。`.22` 未发放，本批直接以 `.23` 发放（滚一轮即可）
+
 ### v3.1.0-lxy.22（客户线 · 兼容 0.1.7-rc.1 / rc.2）
 
 - **品牌再换（2026-09-30 晚，店主口径）：名字改「中贝智能体」、图标全部还原成「中贝」那套**——`SHIBEI_BRAND_NAME` → `中贝智能体`；`SHIBEI_LOGO_URL` 与启动页首帧文案（`BRAND_SHELL_TITLE` + `BOOT_BRAND_RULES`）同步指向 wm `/brand/zhongbei-logo.a30739cc.png`；站点图标/PWA 图标资产在 `deepseek-harness-docker`，门户/Element 文案在 `dsh-fleet`
